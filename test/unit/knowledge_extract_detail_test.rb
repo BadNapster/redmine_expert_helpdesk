@@ -264,8 +264,8 @@ class KnowledgeExtractDetailTest < ActiveSupport::TestCase
   end
 
   def test_finer_levels_ask_for_escaped_backslashes
-    assert_includes Extractor.prompt_for('most_specific'), 'Backslash'
-    assert_not_includes Extractor.prompt_for('general'), 'Backslash'
+    assert_includes Extractor.prompt_for('most_specific'), 'обратный слэш'
+    assert_not_includes Extractor.prompt_for('general'), 'обратный слэш'
   end
 
   # --- extractor uses the project's prompt -------------------------------------

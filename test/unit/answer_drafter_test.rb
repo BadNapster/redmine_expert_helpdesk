@@ -61,10 +61,10 @@ class AnswerDrafterTest < ActiveSupport::TestCase
   def test_variant_suffix_reaches_the_prompt
     issue = Issue.new(:subject => 'Kasse 3', :description => 'Geht nicht.')
     prompt = drafter.send(:system_prompt, issue, nil, 'steps', [])
-    assert_includes prompt, 'Schritt-fuer-Schritt'
+    assert_includes prompt, 'пошаговая инструкция'
     prompt = drafter.send(:system_prompt, issue, nil, 'ask', [])
-    assert_includes prompt, 'Rueckfrage'
-    assert_includes prompt, 'KEINE Loesung'
+    assert_includes prompt, 'уточняющий запрос'
+    assert_includes prompt, 'НЕ предлагай ни решения, ни причины'
   end
 
   # --- Wissensbasis-Block -------------------------------------------------
@@ -82,7 +82,7 @@ class AnswerDrafterTest < ActiveSupport::TestCase
   def test_kb_block_forbids_internal_details_in_the_reply
     block = drafter.send(:kb_block, [hit(4711, 0.9, 'Freigabe fehlt', 'Pfad \\\\srv-fs01\\daten gemappt')])
     assert_includes block, Drafter::INTERNALS_RULE
-    assert_includes block, 'Host'
+    assert_includes block, 'хостов'
   end
 
   def test_kb_block_is_absent_without_hits
@@ -96,8 +96,8 @@ class AnswerDrafterTest < ActiveSupport::TestCase
     d = drafter
     d.define_singleton_method(:mailbox_for) { |_i| nil }
     frame = d.send(:frame_block, issue, {})
-    assert_includes frame, 'kein Kopftext'
-    assert_includes frame, 'kein Fusstext'
+    assert_includes frame, 'Верхний текст не добавляется'
+    assert_includes frame, 'Нижний текст не добавляется'
   end
 
   def test_frame_block_quotes_a_configured_header_and_footer
@@ -110,10 +110,10 @@ class AnswerDrafterTest < ActiveSupport::TestCase
     frame = d.send(:frame_block, issue, {})
     assert_includes frame, 'Guten Tag,'
     assert_includes frame, 'Mit freundlichen Gruessen'
-    assert_includes frame, 'VORANGESTELLT'
-    assert_includes frame, 'ANGEHAENGT'
+    assert_includes frame, 'ДОБАВЛЯЕТСЯ ПЕРЕД'
+    assert_includes frame, 'ПРИСОЕДИНЯЕТСЯ В КОНЦЕ'
     # Genau der Punkt: das Modell soll keine zweite Anrede schreiben.
-    assert_includes frame, 'beginne nicht mit einer eigenen Anrede'
+    assert_includes frame, 'не начинай с собственного приветствия'
   end
 
   # --- Eingabetext --------------------------------------------------------
