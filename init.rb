@@ -85,12 +85,12 @@ require File.expand_path('../lib/redmine_expert_helpdesk/patches/issue_css_class
 require File.expand_path('../lib/redmine_expert_helpdesk/patches/journal_patch', __FILE__)
 
 Redmine::Plugin.register :redmine_expert_helpdesk do
-  name 'Redmine expert Helpdesk'
+  name 'Redmine Helpdesk'
   author 'Dennis Buehring'
   description 'Helpdesk plugin: email-to-ticket via Microsoft Graph or IMAP/SMTP, autoresponder, customer replies, SLA, and rules engine'
   version '0.20.4'
   requires_redmine :version_or_higher => '5.0'
-  url 'https://github.com/expertZentrale/redmine_expert_helpdesk'
+  url 'https://github.com/BadNapster/redmine_expert_helpdesk.git'
 
   # Central app registration (Azure AD / Entra ID) and API key for the fetch endpoint
   settings :partial => 'settings/helpdesk_settings',
