@@ -29,6 +29,14 @@
 - Functional regexes that match real mail text (quote markers, reply headers,
   closing lines) and the stored legacy prompts (`LEGACY_DEFAULT_PROMPTS`) stay
   unchanged on purpose — see `docs/localization.md` for the full list.
+- **Reply form prefills Cc with the original recipients.** The addresses the
+  ticket-opening mail was copied to (the `recipient_cc` of the first inbound
+  mail) now sit in the reply form's Cc field automatically, so the people the
+  customer copied stay in the loop without reopening the original mail and
+  retyping them. The original-recipients checklist behind the Cc field starts
+  checked and still lets the agent remove or re-add individual addresses; the
+  original To remains a manual choice there. Our own mailbox and the customer
+  are excluded exactly as before.
 
 ### Fixed
 

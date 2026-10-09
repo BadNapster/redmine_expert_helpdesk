@@ -1,10 +1,12 @@
 require File.expand_path('../../test_helper', __FILE__)
 
-# The reply form prefills To with the customer and leaves Cc empty, but the mail
-# that opened the ticket was often addressed to several people. Those addresses
-# are stored with every incoming mail, so the form offers them behind the To and
-# Cc fields rather than making the agent reopen the original mail and retype
-# them - which is what made them get dropped from the answer.
+# The reply form prefills To with the customer and Cc with the addresses the
+# mail that opened the ticket was copied to. Those original recipients are
+# stored with every incoming mail: the original Cc rides along on the answer
+# automatically, while the original To (everyone besides our own mailbox and
+# the customer) is offered behind the To field rather than prefilled - having
+# to reopen the original mail and retype them by hand is what made them get
+# dropped from the answer.
 class HelpdeskReplyOriginalRecipientsTest < Redmine::IntegrationTest
   fixtures :projects, :users, :email_addresses, :members, :member_roles, :roles,
            :enabled_modules, :trackers, :projects_trackers, :issue_statuses,
@@ -41,6 +43,36 @@ class HelpdeskReplyOriginalRecipientsTest < Redmine::IntegrationTest
                   ['chef@kunde.de'].to_json
     assert_select 'span.hd-orig-wrap[data-hd-field="hd-cc"][data-hd-original=?]',
                   ['kollege@kunde.de'].to_json
+  end
+
+  # The Cc of the mail that opened the ticket is the audience of that ticket,
+  # so it is prefilled - no extra click to keep the copied people in the loop.
+  def test_cc_is_prefilled_with_the_original_cc_recipients
+    inbound('kunde@example.com, chef@kunde.de', 'kollege@kunde.de')
+    get "/issues/#{@issue.id}/edit"
+
+    assert_response :success
+    assert_select 'input#hd-cc[value=?]', 'kollege@kunde.de'
+  end
+
+  # Multiple Cc addresses are prefilled as a comma-separated list, the same
+  # separator the agent's own input and the checklist writes.
+  def test_cc_is_prefilled_with_all_the_original_cc_recipients
+    inbound('kunde@example.com', 'kollege@kunde.de, leiter@kunde.de')
+    get "/issues/#{@issue.id}/edit"
+
+    assert_response :success
+    assert_select 'input#hd-cc[value=?]', 'kollege@kunde.de, leiter@kunde.de'
+  end
+
+  # Nothing to copy, nothing prefilled: a ticket that arrived without a Cc must
+  # not gain an empty-looking Cc field.
+  def test_cc_stays_empty_without_original_cc_recipients
+    inbound('kunde@example.com, chef@kunde.de')
+    get "/issues/#{@issue.id}/edit"
+
+    assert_response :success
+    assert_select 'input#hd-cc[value=?]', ''
   end
 
   # The customer sits in the To field already, so offering them again is noise.

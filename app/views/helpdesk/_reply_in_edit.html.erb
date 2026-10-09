@@ -36,7 +36,11 @@
       <tr>
         <th>CC</th>
         <td>
-          <input type="text" id="hd-cc"  value="" class="hd-addr-field"
+          <%# The original Cc of the mail that opened the ticket rides along
+              automatically: whoever the customer copied on the request stays
+              copied on the answer. The dropdown below still lets the agent
+              remove or re-add individual addresses. %>
+          <input type="text" id="hd-cc"  value="<%= h(original_cc.join(', ')) %>" class="hd-addr-field"
                  placeholder="<%= h(l(:label_helpdesk_reply_addresses_hint)) %>" />
           <% if original_cc.any? %>
             <span class="hd-orig-wrap" data-hd-field="hd-cc"
@@ -742,9 +746,11 @@
 
 // "Original recipients" behind the To and Cc fields: the addresses the customer
 // mail that opened the ticket was sent to, minus our own mailbox and the
-// customer. Checking one adds it to the field, unchecking takes it back out -
-// per address, because the original recipients are not automatically the right
-// audience for the answer.
+// customer. The original Cc already sits prefilled in the Cc field, so the
+// checkboxes start checked and unchecking takes an address back out. The
+// original To stays a manual choice in its dropdown - the customer is already
+// in To, and not every directly-addressed colleague belongs on the answer.
+// Checking one adds it to the field, unchecking takes it back out.
 (function() {
   // Field values are comma/semicolon separated, but a separator inside quotes
   // or angle brackets separates nothing: the contact autocomplete inserts RFC
