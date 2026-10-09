@@ -1,8 +1,9 @@
-# Icon-Kompatibilitaet ueber Redmine-Versionen hinweg.
-# Redmine 6 rendert Icons per SVG-Sprite (`sprite_icon`); die alten
-# `icon icon-*`-CSS-Klassen wurden in Redmine 7 entfernt. Dieser Helfer nutzt
-# `sprite_icon`, wenn verfuegbar (Redmine 6/7), und faellt sonst auf das reine
-# Label zurueck (Redmine 5, wo die `icon icon-*`-Klasse am Link das Icon liefert).
+# Icon compatibility across Redmine versions.
+# Redmine 6 renders icons via SVG sprite (`sprite_icon`); the old
+# `icon icon-*` CSS classes were removed in Redmine 7. This helper uses
+# `sprite_icon` when available (Redmine 6/7), and otherwise falls back to the
+# plain label (Redmine 5, where the `icon icon-*` class on the link provides
+# the icon).
 module HelpdeskIconsHelper
   def hd_icon_label(icon, label = nil)
     if respond_to?(:sprite_icon)

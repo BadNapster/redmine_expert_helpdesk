@@ -1,5 +1,5 @@
 # Per-project control of the completeness check for incoming mail
-# ("Rueckfrage bei unvollstaendiger Meldung"):
+# ("follow-up question on incomplete reports"):
 # - info_request_mode: off | heuristic | ai (evaluate the initial mail, and how?)
 # - the info_request_* rule columns configure the heuristic mode
 # - info_request_ai_prompt/-_mode combine the project prompt with the central

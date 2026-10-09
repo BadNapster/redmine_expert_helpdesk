@@ -1,14 +1,14 @@
-# KI-Client fuer Zusammenfassungen eingehender Helpdesk-Mails.
+# AI client for summarising incoming helpdesk mails.
 #
-# Unterstuetzt drei Provider (zentral konfiguriert in den Plugin-Einstellungen):
+# Supports three providers (configured centrally in the plugin settings):
 #   - openai    : OpenAI Chat Completions (Authorization: Bearer)
 #   - anthropic : Anthropic Messages API (x-api-key + anthropic-version)
-#   - custom    : beliebiger OpenAI-kompatibler Endpunkt (self-hosted:
-#                 Ollama, vLLM, LocalAI, LM Studio ...) via Basis-URL
+#   - custom    : any OpenAI-compatible endpoint (self-hosted:
+#                 Ollama, vLLM, LocalAI, LM Studio ...) via base URL
 #
-# HTTP wie im GraphClient ueber die Ruby-Stdlib (Net::HTTP), ohne Zusatz-Gem,
-# ohne Retry. Fehler werden als AiError geworfen; der aufrufende Job faengt sie
-# ab und bricht die Mailverarbeitung nicht.
+# HTTP as in GraphClient via the Ruby standard library (Net::HTTP), no extra gem,
+# no retry. Errors are raised as AiError; the calling job catches them
+# and does not break mail processing.
 
 require 'net/http'
 require 'uri'
@@ -28,10 +28,10 @@ module RedmineExpertHelpdesk
 
     class ConfigurationError < AiError; end
 
-    # Der Dienst war nicht erreichbar (Timeout, DNS, TLS, Connection refused) -
-    # im Unterschied zu einer Anfrage, die der Provider inhaltlich abgelehnt hat.
-    # Der Bearbeiter kann aus dem Unterschied etwas machen: gleich noch einmal
-    # versuchen, oder in die Einstellungen schauen.
+    # The service was unreachable (timeout, DNS, TLS, connection refused) - as
+    # opposed to a request the provider rejected on its merits. The operator can
+    # act on the difference: either try again right away, or look at the
+    # settings.
     class TransportError < AiError; end
 
     PROVIDERS = %w[openai anthropic custom].freeze
@@ -43,39 +43,37 @@ module RedmineExpertHelpdesk
 
     ANTHROPIC_VERSION = '2023-06-01'.freeze
 
-    # Solider deutscher Default-Prompt (bearbeiterorientiert). Wird zentral in den
-    # Plugin-Einstellungen als Default hinterlegt und kann pro Projekt erweitert
-    # oder ersetzt werden (HelpdeskProjectSetting#effective_ai_prompt).
+    # Solid Russian default prompt (agent-facing). Stored centrally as the
+    # plugin settings default and can be extended or overridden per project
+    # (HelpdeskProjectSetting#effective_ai_prompt).
     DEFAULT_PROMPT = <<~PROMPT.freeze
-      Du bist ein Assistent im technischen Kundensupport (Helpdesk). Fasse die
-      eingehende Kundennachricht fuer die Support-Bearbeiter praegnant zusammen.
-      Die Nachricht kann eine weitergeleitete Mail oder ein ganzer Mailverlauf
-      sein, in dem die wichtigen Informationen verstreut sind.
+      Ты — ассистент в технической поддержке (Helpdesk). Составь для сотрудников
+      поддержки краткую сводку входящего сообщения клиента. Сообщение может быть
+      пересланным письмом или целой перепиской, в которой важная информация
+      разбросана по разным письмам.
 
-      Die Nachricht beginnt mit der Betreffzeile ("Betreff: ..."). Sie ist Teil der
-      Kundennachricht - Angaben dort (System, Geraet, Fehler, Zeitpunkt) gehoeren
-      genauso in die Zusammenfassung wie Angaben aus dem Text.
+      Сообщение начинается со строки темы («Тема: ...»). Она является частью
+      сообщения клиента — данные из нее (система, устройство, ошибка, сроки)
+      включаются в сводку так же, как и данные из текста.
 
-      Gib eine kurze Zusammenfassung auf Deutsch als Stichpunkte aus. Nenne nur
-      zutreffende Punkte und erfinde keine Informationen:
-      - Anliegen: Was ist das eigentliche Problem/Anliegen des Kunden?
-      - Wunsch: Was moechte der Kunde konkret erreichen?
-      - Bisher versucht: Bereits erwaehnte Loesungsversuche/Schritte.
-      - Wichtige Fakten: Fehlermeldungen, Zeitangaben, betroffene Systeme, Nummern.
-      - Anhaenge: Falls relevante Anhaenge genannt/enthalten sind, kurz erwaehnen.
+      Выдай краткую сводку на русском языке в виде пунктов. Называй только
+      соответствующие пункты и ничего не выдумывай:
+      - Обращение: какова настоящая проблема/запрос клиента?
+      - Пожелание: чего конкретно клиент хочет добиться?
+      - Что уже пробовали: упомянутые ранее попытки решения/шаги.
+      - Важные факты: тексты ошибок, сроки, затронутые системы, номера.
+      - Вложения: если упомянуты/содержатся релевантные вложения, кратко укажи.
 
-      Antworte ausschliesslich mit der Zusammenfassung, ohne Anrede und ohne
-      Schlussformel.
+      Отвечай исключительно сводкой, без обращения и без заключительной формулы.
     PROMPT
 
-    # Token-Verbrauch des letzten summarize-Aufrufs: { :input => Integer|nil, :output => Integer|nil }.
+    # Token usage of the last summarize call: { :input => Integer|nil, :output => Integer|nil }.
     attr_reader :last_usage
 
-    # Warum das Modell aufgehoert hat ('stop', 'length', ...), normalisiert ueber
-    # beide Provider. Ohne das ist eine bei max_output_tokens abgeschnittene
-    # Antwort von einer vollstaendigen nicht zu unterscheiden - bei einer
-    # Zusammenfassung Kosmetik, in einer Kundenmail ein halber Satz, der wie
-    # eine Zusage aussieht.
+    # Why the model stopped ('stop', 'length', ...), normalised across both
+    # providers. Without it, an answer cut off at max_output_tokens is
+    # indistinguishable from a complete one - cosmetic for a summary, but in a
+    # customer mail it is half a sentence that reads like a commitment.
     attr_reader :last_finish_reason
 
     def initialize(settings = nil)
@@ -100,7 +98,7 @@ module RedmineExpertHelpdesk
       @settings['ai_api_key'].to_s.strip
     end
 
-    # Basis-URL: leer = Provider-Default; beim custom-Provider ist sie Pflicht.
+    # Base URL: blank = provider default; it is mandatory for the custom provider.
     def endpoint
       @settings['ai_endpoint'].to_s.strip.presence || DEFAULT_ENDPOINTS[provider]
     end
@@ -122,18 +120,18 @@ module RedmineExpertHelpdesk
       v.positive? ? v : 60
     end
 
-    # Erzeugt eine Zusammenfassung.
-    #   system_prompt : Anweisung an das Modell
-    #   user_text     : Mailinhalt (ggf. inkl. Verlauf und Anhang-Text)
+    # Produces a summary.
+    #   system_prompt : instructions to the model
+    #   user_text     : mail content (optionally including history and attachment text)
     #   image_parts   : [{ :content_type => 'image/png', :data => '<base64>' }] (Vision)
-    # Liefert den Zusammenfassungstext (String) oder wirft AiError.
-    #   log_context : optional { :request_type, :project_id, :issue_id } – ist es
-    #                 gesetzt, wird der Aufruf (Erfolg wie Fehler) in
-    #                 HelpdeskAiRequest protokolliert.
+    # Returns the summary text (String) or raises AiError.
+    #   log_context : optional { :request_type, :project_id, :issue_id } - when set,
+    #                 the call (success or failure) is recorded in
+    #                 HelpdeskAiRequest.
     def summarize(system_prompt, user_text, image_parts = [], log_context: nil)
-      raise ConfigurationError, 'KI ist nicht konfiguriert (API-Key, Modell oder Endpunkt fehlt)' unless configured?
+      raise ConfigurationError, 'AI is not configured (API key, model or endpoint missing)' unless configured?
 
-      # Zuruecksetzen, damit ein Aufruf nie den Abbruchgrund des vorherigen erbt.
+      # Reset so a call never inherits the previous one's stop reason.
       @last_finish_reason = nil
       with_request_log(log_context, :provider => provider, :model => model, :default_type => 'summary') do
         if provider == 'anthropic'
@@ -144,10 +142,10 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # --- Embeddings (fuer die Wissensbasis / RAG) --------------------------
-    # Anthropic hat keine Embeddings-API; daher eigener Provider (openai/custom).
-    # Key/Endpunkt fallen auf die Chat-Konfiguration zurueck, wenn derselbe
-    # Provider genutzt wird und kb_embed_* leer ist.
+    # --- Embeddings (for the knowledge base / RAG) --------------------------
+    # Anthropic has no embeddings API; hence its own provider (openai/custom).
+    # Key/endpoint fall back to the chat configuration when the same provider is
+    # used and kb_embed_* is blank.
     EMBED_PROVIDERS     = %w[openai custom].freeze
     DEFAULT_EMBED_MODEL = 'text-embedding-3-small'.freeze
 
@@ -179,19 +177,19 @@ module RedmineExpertHelpdesk
       embed_api_key.present? && embed_model.present? && embed_endpoint.present?
     end
 
-    # Liefert den Embedding-Vektor (Array<Float>) fuer text oder wirft AiError.
-    #   log_context : optional { :request_type, :project_id, :issue_id } – wie bei summarize.
+    # Returns the embedding vector (Array<Float>) for text or raises AiError.
+    #   log_context : optional { :request_type, :project_id, :issue_id } - as in summarize.
     def embed(text, log_context: nil)
-      raise ConfigurationError, 'Embeddings sind nicht konfiguriert (Key/Modell/Endpunkt fehlt)' unless embed_configured?
+      raise ConfigurationError, 'Embeddings are not configured (key/model/endpoint missing)' unless embed_configured?
 
       with_request_log(log_context, :provider => embed_provider, :model => embed_model, :default_type => 'kb_embed') do
         body = post_json("#{embed_endpoint}/embeddings",
                          { 'model' => embed_model, 'input' => text.to_s },
                          { 'Authorization' => "Bearer #{embed_api_key}" })
         vec = body.dig('data', 0, 'embedding')
-        raise AiError.new('Leere Embedding-Antwort vom Provider', nil, body.to_s) if vec.blank?
+        raise AiError.new('Empty embedding response from provider', nil, body.to_s) if vec.blank?
 
-        # Embedding-Verbrauch (bislang verworfen) mitschreiben: nur Input-Tokens.
+        # Record embedding usage (previously discarded): input tokens only.
         usage = body['usage'] || {}
         @last_usage = { :input => usage['prompt_tokens'] || usage['total_tokens'], :output => nil }
         vec
@@ -251,7 +249,7 @@ module RedmineExpertHelpdesk
     # documents array that was passed in.
     #   log_context : optional { :project_id, :issue_id, ... } - as for embed.
     def rerank(query, documents, log_context: nil)
-      raise ConfigurationError, 'Reranking ist nicht konfiguriert (Key/Modell/Endpunkt fehlt)' unless rerank_configured?
+      raise ConfigurationError, 'Reranking is not configured (key/model/endpoint missing)' unless rerank_configured?
 
       docs = Array(documents).map(&:to_s)
       return [] if docs.empty?
@@ -262,7 +260,7 @@ module RedmineExpertHelpdesk
                          { 'Authorization' => "Bearer #{rerank_api_key}" },
                          :read_timeout => rerank_timeout)
         rows = parse_rerank_rows(body, docs.size)
-        raise AiError.new('Leere Rerank-Antwort vom Provider', nil, body.to_s) if rows.empty?
+        raise AiError.new('Empty rerank response from provider', nil, body.to_s) if rows.empty?
 
         usage = (body.is_a?(Hash) ? body['usage'] : nil) || {}
         @last_usage = { :input => usage['total_tokens'] || usage['prompt_tokens'], :output => nil }
@@ -352,10 +350,11 @@ module RedmineExpertHelpdesk
         end
       end
 
-      # OpenAI (offiziell) verlangt fuer GPT-5-/o-Modelle 'max_completion_tokens' und
-      # lehnt 'max_tokens' mit HTTP 400 ab; es funktioniert auch fuer aeltere Modelle
-      # (gpt-4o-mini ...). Self-hosted OpenAI-kompatible Server (Ollama/vLLM/LocalAI)
-      # verstehen dagegen meist nur 'max_tokens' -> beim custom-Provider dabei bleiben.
+      # OpenAI (officially) requires 'max_completion_tokens' for GPT-5-/o-models and
+      # rejects 'max_tokens' with HTTP 400; it also works for older models
+      # (gpt-4o-mini ...). Self-hosted OpenAI-compatible servers (Ollama/vLLM/LocalAI)
+      # on the other hand usually only understand 'max_tokens' -> stick with it for
+      # the custom provider.
       token_param = provider == 'openai' ? 'max_completion_tokens' : 'max_tokens'
       payload = {
         'model'     => model,
@@ -372,7 +371,7 @@ module RedmineExpertHelpdesk
       @last_usage = { :input => usage['prompt_tokens'], :output => usage['completion_tokens'] }
       @last_finish_reason = body.dig('choices', 0, 'finish_reason').to_s.presence
       text = body.dig('choices', 0, 'message', 'content').to_s.strip
-      raise AiError.new('Leere Antwort vom KI-Provider', nil, body.to_s) if text.blank?
+      raise AiError.new('Empty response from the AI provider', nil, body.to_s) if text.blank?
 
       text
     end
@@ -406,21 +405,20 @@ module RedmineExpertHelpdesk
       raw_stop = body['stop_reason'].to_s
       @last_finish_reason = raw_stop == 'max_tokens' ? 'length' : raw_stop.presence
       text = Array(body['content']).map { |c| c['text'] }.compact.join.strip
-      raise AiError.new('Leere Antwort vom KI-Provider', nil, body.to_s) if text.blank?
+      raise AiError.new('Empty response from the AI provider', nil, body.to_s) if text.blank?
 
       text
     end
 
-    # Netzwerkfehler, die Net::HTTP wirft und die vor dem Antwortentwurf niemand
-    # gesehen hat: die Jobs laufen im Hintergrund, dort landet alles im Log. Aus
-    # einem Web-Request heraus wuerde eine unbehandelte Ausnahme die HTML-
-    # Fehlerseite liefern, und der JSON-Client im Browser zeigt dem Bearbeiter
-    # "Unexpected token '<'".
+    # Network errors that Net::HTTP raises and that nobody has seen before the reply
+    # draft: the jobs run in the background, where everything lands in the log. From
+    # a web request, an unhandled exception would produce the HTML error page, and
+    # the JSON client in the browser shows the operator "Unexpected token '<'".
     NETWORK_ERRORS = [Net::OpenTimeout, Net::ReadTimeout, SocketError,
                       Errno::ECONNREFUSED, Errno::ECONNRESET, Errno::EHOSTUNREACH,
                       OpenSSL::SSL::SSLError].freeze
 
-    # POST JSON, parse JSON, raise AiError on non-2xx. Analog zu GraphClient#request.
+    # POST JSON, parse JSON, raise AiError on non-2xx. Analogous to GraphClient#request.
     # read_timeout: overrides this call's time budget (reranking has its own,
     # much tighter than a text generation).
     #
@@ -452,20 +450,20 @@ module RedmineExpertHelpdesk
 
       response = http.request(req)
       unless response.is_a?(Net::HTTPSuccess)
-        raise AiError.new("KI-Anfrage fehlgeschlagen (HTTP #{response.code})", response.code.to_i, response.body)
+        raise AiError.new("AI request failed (HTTP #{response.code})", response.code.to_i, response.body)
       end
 
       JSON.parse(response.body)
     rescue JSON::ParserError => e
-      raise AiError.new("KI-Antwort nicht lesbar: #{e.message}")
+      raise AiError.new("AI response not readable: #{e.message}")
     rescue *NETWORK_ERRORS => e
-      raise TransportError.new("KI-Dienst nicht erreichbar: #{e.class}", nil, e.message)
+      raise TransportError.new("AI service unreachable: #{e.class}", nil, e.message)
     end
 
-    # Fuehrt den KI-Aufruf aus und protokolliert ihn (Erfolg wie Fehler) in
-    # HelpdeskAiRequest, sofern ein log_context uebergeben wurde. Der Block setzt
-    # @last_usage; die Token werden nach erfolgreichem yield ausgelesen. Ohne
-    # Kontext (nil) wird nur ausgefuehrt, nicht protokolliert (rueckwaertskompatibel).
+    # Runs the AI call and records it (success or failure) in HelpdeskAiRequest,
+    # provided a log_context was passed. The block sets @last_usage; the tokens are
+    # read out after a successful yield. Without a context (nil) the call is only
+    # executed, not recorded (backwards compatible).
     def with_request_log(context, provider:, model:, default_type:)
       return yield if context.nil?
 
@@ -492,7 +490,7 @@ module RedmineExpertHelpdesk
       ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1000).round
     end
 
-    # Schreibt eine Protokollzeile. Fehler hier duerfen den KI-Flow nie brechen.
+    # Writes a log line. Errors here must never break the AI flow.
     def log_ai_request(context, provider:, model:, default_type:, duration_ms:, success:,
                        input: nil, output: nil, error_class: nil, http_status: nil)
       HelpdeskAiRequest.create!(
@@ -501,7 +499,7 @@ module RedmineExpertHelpdesk
         :model         => model,
         :project_id    => context[:project_id],
         :issue_id      => context[:issue_id],
-        # Nur der Antwortentwurf setzt das; die Jobs laufen ohne handelnden Nutzer.
+        # Only the answer draft sets this; the jobs run without an acting user.
         :user_id       => context[:user_id],
         :input_tokens  => input,
         :output_tokens => output,
@@ -511,7 +509,7 @@ module RedmineExpertHelpdesk
         :http_status   => http_status
       )
     rescue => e
-      Rails.logger.warn("[helpdesk][ai] Nutzungs-Protokoll konnte nicht gespeichert werden: #{e.class}: #{e.message}")
+      Rails.logger.warn("[helpdesk][ai] Usage log could not be saved: #{e.class}: #{e.message}")
     end
   end
 end

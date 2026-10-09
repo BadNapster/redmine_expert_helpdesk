@@ -1,4 +1,4 @@
-# Verwaltung der Automatisierungsregeln eines Postfachs
+# Management of a mailbox's automation rules
 class HelpdeskRulesController < ApplicationController
   before_action :find_mailbox
   before_action :authorize

@@ -1,4 +1,4 @@
-# Mehrere Feed-Quellen im URL-Spiegel unterscheiden (PhishTank, Phishing.Database).
+# Distinguish several feed sources in the URL mirror (PhishTank, Phishing.Database).
 class AddSourceToHelpdeskPhishingUrls < ActiveRecord::Migration[6.1]
   def change
     unless column_exists?(:helpdesk_phishing_urls, :source)

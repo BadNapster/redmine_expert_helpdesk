@@ -1,4 +1,4 @@
-<%# KI-Statistik des Projekts (Diagramme via Chart.js, lokal gebundelt) %>
+<%# AI statistics for the project (charts via Chart.js, bundled locally) %>
 <% html_title l(:label_helpdesk_ai_statistics) %>
 <% content_for :header_tags do %>
   <%= javascript_include_tag 'chart.umd.min', 'chartjs-plugin-datalabels.min', 'helpdesk_ai_stats', :plugin => 'redmine_expert_helpdesk' %>
@@ -17,7 +17,7 @@
 <% if totals[:requests] == 0 %>
   <p class="nodata"><%= l(:label_helpdesk_ai_stats_no_data) %></p>
 <% else %>
-  <%# --- Kennzahlen auf einen Blick --- %>
+  <%# --- Key figures at a glance --- %>
   <div class="hd-stats-tiles">
     <div class="hd-stats-tile">
       <span class="hd-stats-num"><%= hd_ai_number(totals[:requests]) %></span>
@@ -49,15 +49,15 @@
     </div>
   </div>
 
-  <%# --- Anfragevolumen --- %>
+  <%# --- Request volume --- %>
   <h3><%= l(:label_helpdesk_ai_stats_volume) %></h3>
   <div class="hd-chart-box"><canvas id="hd-chart-ai-volume"></canvas></div>
 
-  <%# --- Token-Verbrauch --- %>
+  <%# --- Token usage --- %>
   <h3><%= l(:label_helpdesk_ai_stats_tokens_over_time) %></h3>
   <div class="hd-chart-box"><canvas id="hd-chart-ai-tokens"></canvas></div>
 
-  <%# --- Erfolg/Fehler im Zeitverlauf --- %>
+  <%# --- Success/failure over time --- %>
   <h3><%= l(:label_helpdesk_ai_stats_success_over_time) %></h3>
   <div class="hd-chart-box"><canvas id="hd-chart-ai-success"></canvas></div>
   <% if @stats[:errors].any? %>
@@ -67,7 +67,7 @@
     </p>
   <% end %>
 
-  <%# --- Aufteilung nach Typ / Modell --- %>
+  <%# --- Breakdown by type / model --- %>
   <div class="hd-stats-busy">
     <div class="hd-stats-busy-col">
       <h3><%= l(:label_helpdesk_ai_stats_by_type) %></h3>
@@ -79,7 +79,7 @@
     </div>
   </div>
 
-  <%# --- Stosszeiten --- %>
+  <%# --- Peak times --- %>
   <div class="hd-stats-busy">
     <div class="hd-stats-busy-col">
       <h3><%= l(:label_helpdesk_stats_busiest_hours) %></h3>
@@ -91,7 +91,7 @@
     </div>
   </div>
 
-  <%# --- Wissensbasis-Status --- %>
+  <%# --- Knowledge base status --- %>
   <h3><%= l(:label_helpdesk_ai_stats_kb_status) %></h3>
   <p class="hd-stats-muted">
     <%= l(:label_helpdesk_ai_stats_kb_approved) %> <strong><%= @stats[:kb][:approved] %></strong> ·

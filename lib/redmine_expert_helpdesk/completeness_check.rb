@@ -60,49 +60,49 @@ module RedmineExpertHelpdesk
     # Central default prompt for the AI mode. Deliberately asks for STRICT JSON and
     # for a conservative verdict: a false "incomplete" mails a customer who did
     # nothing wrong, which is worse than a missed check. The prompt text itself is
-    # German on purpose - it is user-facing content shown in the settings form.
+    # Russian on purpose - it is user-facing content shown in the settings form.
     DEFAULT_AI_PROMPT = <<~PROMPT.freeze
-      Du bist ein Assistent im technischen Kundensupport (Helpdesk). Pruefe, ob die
-      folgende Kundennachricht genug Informationen enthaelt, damit ein Bearbeiter mit
-      der Bearbeitung beginnen kann.
+      Ты — ассистент в технической поддержке (Helpdesk). Проверь, содержит ли
+      следующее сообщение клиента достаточно информации, чтобы сотрудник мог
+      начать обработку.
 
-      Ausreichend ist eine Nachricht in der Regel dann, wenn erkennbar ist:
-      - worum es geht (betroffenes System, Anwendung, Geraet oder Dienst),
-      - was genau passiert (Fehlermeldung, Symptom, beobachtetes Verhalten),
-      - seit wann bzw. wann es auftritt oder wie es reproduziert werden kann.
+      Сообщение, как правило, достаточно, когда видно:
+      - о чем идет речь (затронутая система, приложение, устройство или сервис),
+      - что именно происходит (текст ошибки, симптом, наблюдаемое поведение),
+      - с каких пор или когда это проявляется или как это можно воспроизвести.
 
-      Die Nachricht beginnt mit der Betreffzeile ("Betreff: ..."). Angaben im Betreff
-      zaehlen genauso wie Angaben im Text - frage nichts nach, was dort bereits steht.
+      Сообщение начинается со строки темы («Тема: ...»). Данные из темы так же
+      важны, как и данные из текста — не спрашивай того, что там уже есть.
 
-      Bildmaterial hilft fast immer weiter, deshalb zusaetzlich:
-      - Geht es um SOFTWARE (Anwendung, Web-Portal, Betriebssystem, Fehlerdialog,
-        Meldung auf dem Bildschirm)? Dann sollte ein SCREENSHOT der Fehlermeldung
-        bzw. des betroffenen Fensters vorliegen.
-      - Geht es um HARDWARE (Geraet, Drucker, Kasse, Bildschirm, Kabel, Netzteil,
-        Beschaedigung, Anzeige am Geraet)? Dann sollte ein FOTO des Geraets bzw.
-        der Stelle vorliegen - moeglichst mit Typenschild, Seriennummer oder der
-        Anzeige im Display.
-      - Laesst sich nicht entscheiden, ob Software oder Hardware gemeint ist,
-        fordere kein Bildmaterial an, sondern frage nach dem betroffenen System.
+      Изображения почти всегда помогают, поэтому дополнительно:
+      - Если речь о ПРОГРАММНОМ ОБЕСПЕЧЕНИИ (приложение, веб-портал, операционная
+        система, диалог ошибки, сообщение на экране)? Тогда должен быть
+        СКРИНШОТ текста ошибки или соответствующего окна.
+      - Если речь об ОБОРУДОВАНИИ (устройство, принтер, касса, экран, кабель,
+        блок питания, повреждение, индикация на устройстве)? Тогда должно быть
+        ФОТО устройства или нужного места — по возможности с шильдиком,
+        серийным номером или индикацией на дисплее.
+      - Если нельзя определить, программное это обеспечение или оборудование,
+        не требуй изображений, а спроси о затронутой системе.
 
-      Am Ende der Nachricht steht ein Abschnitt "Anhaenge dieser Mail:" mit den
-      beigefuegten Dateien. Verlange NIEMALS etwas, das dort bereits aufgefuehrt
-      ist: liegt ein Bild bei, ist die Bild-Anforderung erfuellt. Steht dort
-      "keine", enthaelt die Mail keine verwertbaren Anhaenge. Winzige Bilder
-      (Signatur-Logos, Tracking-Pixel) sind bereits herausgefiltert und tauchen
-      dort nicht auf - du musst sie nicht selbst erkennen.
+      В конце сообщения находится раздел «Вложения этого письма:» с
+      прикрепленными файлами. НИКОГДА не требуй того, что там уже указано:
+      если изображение приложено, требование изображения выполнено. Если там
+      написано «нет», в письме нет пригодных вложений. Крошечные изображения
+      (логотипы подписей, пиксели отслеживания) уже отфильтрованы и там не
+      появляются — тебе не нужно распознавать их самому.
 
-      Bewerte im Zweifel als ausreichend. Eine unnoetige Rueckfrage aergert Kunden,
-      die alles Noetige geschrieben haben. Reine Hoeflichkeitsfloskeln, Signaturen
-      und zitierte Verlaeufe zaehlen nicht als Information.
+      При сомнении оценивай как достаточное. Лишний уточняющий запрос раздражает
+      клиентов, написавших все необходимое. Чистая вежливость, подписи и
+      цитируемые переписки информацией не считаются.
 
-      Antworte AUSSCHLIESSLICH mit JSON in genau dieser Form, ohne Codeblock und
-      ohne weiteren Text:
-      {"complete": true|false, "missing": ["fehlende Angabe 1", "fehlende Angabe 2"]}
+      Отвечай ИСКЛЮЧИТЕЛЬНО JSON в точно такой форме, без блока кода и без
+      дополнительного текста:
+      {"complete": true|false, "missing": ["недостающее сведение 1", "недостающее сведение 2"]}
 
-      Bei "complete": true muss "missing" ein leeres Array sein. Formuliere die
-      Eintraege in "missing" als kurze, hoefliche deutsche Stichpunkte, die dem
-      Kunden direkt als Rueckfrage vorgelegt werden koennen.
+      При "complete": true поле "missing" должно быть пустым массивом. Формулируй
+      записи в "missing" как короткие вежливые пункты на русском языке, которые
+      можно сразу предъявить клиенту в качестве уточняющего запроса.
     PROMPT
 
     class << self
@@ -146,15 +146,15 @@ module RedmineExpertHelpdesk
       # complete, because a garbled response must never trigger a mail to a customer.
       def parse_ai_verdict(raw)
         json = extract_json(raw.to_s)
-        return error_verdict('keine JSON-Antwort erhalten') if json.nil?
+        return error_verdict('no JSON answer received') if json.nil?
 
         data = JSON.parse(json)
-        return error_verdict('unerwartete JSON-Struktur') unless data.is_a?(Hash)
+        return error_verdict('unexpected JSON structure') unless data.is_a?(Hash)
 
         complete = data['complete']
         # Only a literal false (or "false") counts as incomplete; a missing or
         # non-boolean key is a malformed answer, not a verdict.
-        return error_verdict('Feld "complete" fehlt oder ist kein Boolean') unless
+        return error_verdict('field "complete" missing or not a boolean') unless
           [true, false, 'true', 'false'].include?(complete)
 
         return Verdict.new(:complete => true, :reasons => [], :source => 'ai') if
@@ -162,11 +162,11 @@ module RedmineExpertHelpdesk
 
         missing = Array(data['missing']).map { |m| m.to_s.strip }.reject(&:blank?)
         # "incomplete" without a single reason gives the customer nothing to answer.
-        return error_verdict('unvollstaendig ohne Begruendung') if missing.empty?
+        return error_verdict('incomplete without reason') if missing.empty?
 
         Verdict.new(:complete => false, :reasons => missing, :source => 'ai')
       rescue JSON::ParserError => e
-        error_verdict("JSON nicht lesbar: #{e.message}")
+        error_verdict("JSON not readable: #{e.message}")
       end
 
       # Strips quoted history and normalises whitespace, so quoted-printable line
@@ -227,7 +227,7 @@ module RedmineExpertHelpdesk
           type.present? ? "#{name} (#{type})" : name
         end
 
-        "\n\nAnhaenge dieser Mail: #{list.any? ? list.join(', ') : 'keine'}"
+        "\n\nВложения этого письма: #{list.any? ? list.join(', ') : 'нет'}"
       end
 
       # Model input for the AI mode, in a fixed order: subject line first, then the
@@ -239,7 +239,7 @@ module RedmineExpertHelpdesk
         body = body.first(limit) if limit.positive?
 
         head = subject.to_s.strip
-        head = head.present? ? "Betreff: #{head}\n\n" : ''
+        head = head.present? ? "Тема: #{head}\n\n" : ''
 
         head + body + attachment_inventory(attachments, setting)
       end
@@ -268,7 +268,7 @@ module RedmineExpertHelpdesk
       end
 
       def error_verdict(message)
-        Rails.logger.warn("[helpdesk][info_request] KI-Antwort verworfen: #{message}")
+        Rails.logger.warn("[helpdesk][info_request] AI answer discarded: #{message}")
         Verdict.new(:complete => true, :reasons => [], :source => 'error')
       rescue StandardError
         Verdict.new(:complete => true, :reasons => [], :source => 'error')

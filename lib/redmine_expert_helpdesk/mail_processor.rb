@@ -1,10 +1,10 @@
-# Kernstueck des Helpdesk-Plugins: Verarbeitung eingehender Mails.
+# Core of the helpdesk plugin: processing of incoming mail.
 #
-# Der Mail-Backend wird pro Postfach ueber MailProvider aufgeloest (Microsoft
-# Graph oder generisches IMAP/SMTP); dieser Ablauf ist providerneutral.
+# The mail backend is resolved per mailbox through MailProvider (Microsoft
+# Graph or generic IMAP/SMTP); this flow is provider-neutral.
 #
-# Ablauf pro Postfach:
-#   1. Nachrichten ueber den Provider aus dem Quellordner laden
+# Flow per mailbox:
+#   1. Load messages from the source folder through the provider
 #   2. Check the sender against the black-/whitelist
 #   3. Apply the "ignore" rules
 #   4. Hand the MIME to Redmine's own MailHandler
@@ -31,7 +31,7 @@ module RedmineExpertHelpdesk
       @provider = provider || MailProvider.for(mailbox)
     end
 
-    # Verarbeitet alle Nachrichten des Postfachs. Liefert ein Result-Objekt.
+    # Processes all messages of the mailbox. Returns a Result object.
     # In maintenance mode nothing is fetched; the run is registered first so a
     # status read never misses a fetch that got past the check (see Maintenance).
     def process_all(limit = 25)
@@ -77,12 +77,12 @@ module RedmineExpertHelpdesk
         begin
           process_message(meta, result)
         rescue StandardError => e
-          Rails.logger.error "Helpdesk: Fehler bei Nachricht #{meta.id} (#{@mailbox.mailbox_address}): #{e.message}"
+          Rails.logger.error "Helpdesk: error processing message #{meta.id} (#{@mailbox.mailbox_address}): #{e.message}"
           result.errors << { :subject => meta.subject, :error => e.message }
           begin
             move_failed(meta.id)
           rescue StandardError => move_err
-            Rails.logger.warn "Helpdesk: Nachricht #{meta.id} konnte nicht in Fehlerordner verschoben werden: #{move_err.message}"
+            Rails.logger.warn "Helpdesk: message #{meta.id} could not be moved to the failed folder: #{move_err.message}"
           end
         end
       end
@@ -107,9 +107,8 @@ module RedmineExpertHelpdesk
       sender_name = meta.from_name.to_s
       subject = meta.subject.to_s
 
-      # Black-/Whitelist und Ignorieren-Regeln: Nachricht bleibt unangetastet liegen?
-      # Nein – abgelehnte Mails werden ebenfalls verschoben, damit sie nicht
-      # bei jedem Abruf erneut geprueft werden.
+      # Blacklist/whitelist and ignore rules: does the message stay untouched?
+      # No - rejected mails are moved too, so they are not re-checked on every fetch.
       if sender_rejected?(sender) || ignore_rule_matches?(subject, sender)
         move_skipped(meta.id)
         result.skipped += 1
@@ -119,24 +118,24 @@ module RedmineExpertHelpdesk
       mime = @provider.message_mime(meta.id)
 
       if auto_reply_filtered?(mime, sender)
-        Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): Auto-Reply ignoriert – #{subject.inspect} von #{sender}"
+        Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): auto-reply ignored – #{subject.inspect} from #{sender}"
         move_skipped(meta.id)
         result.skipped += 1
         return
       end
 
-      # Phishing-Pruefung gegen den lokalen Feed-Spiegel (pro Projekt aktivierbar).
-      # 'quarantine': Mail mit bestaetigtem Treffer wird ohne Ticket in den Skipped-Ordner verschoben.
-      # 'neutralize': Links werden im Body ersetzt, Verarbeitung laeuft weiter.
-      # Verdachtsfaelle (Weiterleitung/Kurz-URL/Linktext-Mismatch) werden nur markiert,
-      # nie quarantaenisiert (zu viele legitime Faelle, z. B. Newsletter-Tracking).
+      # Phishing check against the local feed mirror (per-project toggle).
+      # 'quarantine': a mail with a confirmed hit is moved to the skipped folder without a ticket.
+      # 'neutralize': links in the body are replaced, processing continues.
+      # Suspicious cases (redirect/shortener/link-text mismatch) are only marked,
+      # never quarantined (too many legitimate cases, e.g. newsletter tracking).
       phishing_hits = []
       phishing_suspicions = []
       if phishing_check_enabled?
         scan = PhishingScanner.scan(mime)
         if scan[:hits].any? && phishing_action == 'quarantine'
-          Rails.logger.warn "Helpdesk (#{@mailbox.mailbox_address}): Phishing-Mail in Quarantaene – " \
-                            "#{subject.inspect} von #{sender} (#{scan[:hits].size} URL(s))"
+          Rails.logger.warn "Helpdesk (#{@mailbox.mailbox_address}): phishing mail quarantined – " \
+                            "#{subject.inspect} from #{sender} (#{scan[:hits].size} URL(s))"
           move_skipped(meta.id)
           result.skipped += 1
           return
@@ -146,21 +145,21 @@ module RedmineExpertHelpdesk
           phishing_hits = scan[:hits]
           phishing_suspicions = scan[:suspicions]
           mime = scan[:mime]
-          Rails.logger.warn "Helpdesk (#{@mailbox.mailbox_address}): #{phishing_hits.size} Phishing-URL(s) neutralisiert, " \
-                            "#{phishing_suspicions.size} verschleierte(r) Link(s) markiert – #{subject.inspect} von #{sender}"
+          Rails.logger.warn "Helpdesk (#{@mailbox.mailbox_address}): #{phishing_hits.size} phishing URL(s) neutralized, " \
+                            "#{phishing_suspicions.size} disguised link(s) marked – #{subject.inspect} from #{sender}"
         end
       end
 
-      # Vorverarbeitung: Wenn das referenzierte Ticket geschlossen und zu alt ist,
-      # Thread-Header entfernen, damit MailHandler ein neues Ticket anlegt.
+      # Pre-processing: if the referenced ticket is closed and too old, strip the
+      # thread headers so MailHandler creates a new ticket instead.
       mime = maybe_strip_thread_for_new_issue(mime)
 
-      # NDR-Mails haben Auto-Submitted: auto-replied, was Redmines MailHandler
-      # ebenfalls als Auto-Reply ablehnt. Header fuer NDRs entfernen.
+      # NDR mails carry Auto-Submitted: auto-replied, which Redmine's MailHandler
+      # likewise rejects as an auto-reply. Strip those headers for NDRs.
       mime = strip_auto_submitted_for_ndr(mime)
 
-      # Stellt sicher, dass Antworten auf Helpdesk-Mails dem richtigen Ticket
-      # zugeordnet werden, auch wenn der Betreff kein [#id]-Tag enthaelt.
+      # Make sure replies to helpdesk mails land on the right ticket even when the
+      # subject has no [#id] tag.
       mime = ensure_thread_reference(mime)
 
       # Inline images: make sure the body MailHandler keeps still references the
@@ -170,7 +169,7 @@ module RedmineExpertHelpdesk
       object = MailHandler.receive(InlineImages.prepare_mime(mime), mail_handler_options)
 
       unless object
-        # MailHandler hat die Mail abgelehnt (z. B. eigene Adresse, ungueltig)
+        # MailHandler rejected the mail (e.g. own address, invalid input)
         move_skipped(meta.id)
         result.skipped += 1
         return
@@ -222,10 +221,10 @@ module RedmineExpertHelpdesk
         eml_att = attach_eml(issue, mime, eml_author)
         if eml_att
           msg.update_column(:eml_attachment_id, eml_att.id)
-          # Kein HTML mehr in die Journal-Notiz schreiben: Redmines Wiki-Sanitizer
-          # entfernt class-Attribute, Styling ist so nicht moeglich. Die einzeilige
-          # Mail-Kopfzeile wird clientseitig injiziert (_issue_sidebar.html.erb,
-          # Badge im h4.note-header per Timestamp-Matching).
+          # No more HTML in the journal note: Redmine's wiki sanitizer strips
+          # class attributes, so styling is impossible. The single-line mail
+          # header is injected client-side (_issue_sidebar.html.erb,
+          # badge in h4.note-header via timestamp matching).
         end
 
         send_autoresponder(issue, contact, meta.internet_message_id) if new_issue && @mailbox.autoresponder_enabled?
@@ -241,7 +240,7 @@ module RedmineExpertHelpdesk
       result.processed += 1
     end
 
-    # Optionen fuer den Redmine MailHandler – Projekt und Standardwerte des Postfachs
+    # Options for Redmine's MailHandler - the project and the mailbox defaults.
     def mail_handler_options
       issue_attrs = { :project => @mailbox.project.identifier }
       issue_attrs[:tracker]  = @mailbox.default_tracker.name  if @mailbox.default_tracker
@@ -265,10 +264,10 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # KI-Zusammenfassung asynchron anstossen (nicht blockierend). Prueft globale
-    # und projektspezifische Aktivierung sowie den Umfang (nur Erstmail vs. auch
-    # Antworten), damit ohne aktivierte Funktion kein Job in die Queue geht.
-    # Fehler beim Enqueue duerfen die Mailverarbeitung nicht abbrechen.
+    # Kicks off the AI summary asynchronously (non-blocking). Checks the global
+    # and project-specific activation as well as the scope (first mail only vs.
+    # replies too), so no job enters the queue while the feature is off.
+    # Enqueue failures must not abort mail processing.
     def enqueue_ai_summary(issue, object, new_issue, msg)
       return unless RedmineExpertHelpdesk::AiFeatures.ai_enabled?
 
@@ -282,7 +281,7 @@ module RedmineExpertHelpdesk
         :message_id => msg.id
       )
     rescue => e
-      Rails.logger.warn("[helpdesk][ai] Enqueue fehlgeschlagen (Issue ##{issue.id}): #{e.message}")
+      Rails.logger.warn("[helpdesk][ai] enqueue failed (Issue ##{issue.id}): #{e.message}")
     end
 
     # Enqueue the completeness check of the first mail. New tickets only: a reply in
@@ -295,15 +294,15 @@ module RedmineExpertHelpdesk
 
       HelpdeskCompletenessJob.perform_later(issue.id, :message_id => msg.id)
     rescue => e
-      Rails.logger.warn("[helpdesk][info_request] Enqueue fehlgeschlagen " \
+      Rails.logger.warn("[helpdesk][info_request] enqueue failed " \
                         "(Issue ##{issue.id}): #{e.message}")
     end
 
-    # --- Ticket-Wiedereroeffnung --------------------------------------------
+    # --- Ticket reopen --------------------------------------------------------
 
-    # Entfernt Thread-Header aus der MIME-Nachricht, wenn das referenzierte
-    # Ticket geschlossen UND aelter als reopen_max_age_days ist.
-    # Dadurch legt MailHandler ein neues Ticket an statt einen Kommentar anzuhaengen.
+    # Strips the thread headers from the MIME message when the referenced ticket is
+    # closed AND older than reopen_max_age_days. MailHandler then creates a new
+    # ticket instead of appending a comment.
     def maybe_strip_thread_for_new_issue(mime)
       return mime unless @mailbox.reopen_max_age_days.to_i > 0
 
@@ -314,20 +313,20 @@ module RedmineExpertHelpdesk
       age_days = (Time.current.to_f - issue.updated_on.to_f) / 86_400.0
       return mime if age_days <= @mailbox.reopen_max_age_days.to_i
 
-      Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): Ticket ##{issue.id} ist #{age_days.round} Tage geschlossen " \
-                        "(Limit: #{@mailbox.reopen_max_age_days} Tage) – neues Ticket wird erstellt"
+      Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): ticket ##{issue.id} has been closed for #{age_days.round} days " \
+                        "(limit: #{@mailbox.reopen_max_age_days} days) – a new ticket will be created"
 
       msg['in-reply-to'] = nil
       msg['references']  = nil
       msg.subject = msg.subject.to_s.gsub(/\s*\[#\d+\]\s*/, ' ').strip
       msg.to_s
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk: Thread-Vorverarbeitung fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk: thread pre-processing failed: #{e.message}"
       mime
     end
 
-    # Sucht das im Betreff referenzierte Ticket (Muster [#ID]).
-    # Fallback: HelpdeskMessage-Tabelle per Internet-Message-ID aus In-Reply-To.
+    # Finds the ticket referenced in the subject (pattern [#ID]).
+    # Fallback: HelpdeskMessage table via Internet-Message-ID from In-Reply-To.
     def find_referenced_issue(msg)
       if msg.subject.to_s =~ /\[#(\d+)\]/
         issue = Issue.find_by(:id => $1.to_i)
@@ -344,22 +343,22 @@ module RedmineExpertHelpdesk
       nil
     end
 
-    # Injiziert [#id] in den Betreff, wenn die Mail als Antwort auf eine bekannte
-    # Helpdesk-Nachricht erkannt wird und der Betreff noch kein [#id]-Tag enthaelt.
-    # Sichert die Thread-Zuordnung auch dann, wenn das Betreff geaendert wurde oder
-    # der Autoresponder ohne [#id] konfiguriert ist.
+    # Injects [#id] into the subject when the mail is recognised as a reply to a
+    # known helpdesk message and the subject has no [#id] tag yet. Keeps the thread
+    # assignment working even when the subject was changed or the autoresponder is
+    # configured without [#id].
     def ensure_thread_reference(mime)
       msg = Mail.read_from_string(mime)
-      return mime if msg.subject.to_s =~ /\[#\d+\]/  # bereits vorhanden
+      return mime if msg.subject.to_s =~ /\[#\d+\]/  # already present
 
       issue = find_referenced_issue(msg)
       return mime unless issue
 
-      Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): Thread-Referenz auf Ticket ##{issue.id} erkannt – [##{issue.id}] in Betreff injiziert"
+      Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): thread reference to ticket ##{issue.id} detected – [##{issue.id}] injected into subject"
       msg.subject = "[##{issue.id}] #{msg.subject}"
       msg.to_s
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk: ensure_thread_reference fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk: ensure_thread_reference failed: #{e.message}"
       mime
     end
 
@@ -409,8 +408,8 @@ module RedmineExpertHelpdesk
       issue.status = new_status
       issue.save(:validate => false)
       record_reply_status_journal(issue, journal, old_status_id, new_status.id)
-      Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): Ticket ##{issue.id} " \
-                        "#{reopened ? 'wiedereroffnet' : 'auf Antwortstatus gesetzt'} \u2013 Status \"#{new_status.name}\""
+      Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): ticket ##{issue.id} " \
+                        "#{reopened ? 'reopened' : 'moved to reply status'} \u2013 status \"#{new_status.name}\""
       reopened
     end
 
@@ -437,7 +436,7 @@ module RedmineExpertHelpdesk
         fallback.save!
       end
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk: Status-Journal fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk: status journal for ticket ##{issue.id} failed: #{e.message}"
     end
 
     # True when the inbound mail was written by an agent (someone allowed to reply to
@@ -453,44 +452,44 @@ module RedmineExpertHelpdesk
       false
     end
 
-    # --- Auto-Reply-Filter --------------------------------------------------
+    # --- Auto-reply filter ---------------------------------------------------
 
-    # Prueft, ob die Mail als automatisch generierte Nachricht erkannt wurde
-    # und vom Filter abgefangen werden soll.
-    # Gibt false zurueck, wenn:
-    #   - der Filter am Postfach deaktiviert ist
-    #   - der Absender in der Absender-Whitelist steht
-    #   - ein Header:Wert-Paar der Header-Whitelist in der Mail vorkommt
+    # Checks whether the mail is recognised as an automatically generated
+    # message and should be caught by the filter.
+    # Returns false when:
+    #   - the filter is disabled on the mailbox
+    #   - the sender is on the sender whitelist
+    #   - a header:value pair from the header whitelist occurs in the mail
     def auto_reply_filtered?(mime, sender)
       return false unless @mailbox.auto_reply_filter_enabled?
 
-      # Absender-Whitelist: dieser Absender soll auch mit Auto-Reply-Headern
-      # verarbeitet werden (z. B. bekanntes Monitoring-System).
+      # Sender whitelist: this sender should be processed even with
+      # auto-reply headers (e.g. a known monitoring system).
       sender_wl = parse_list(@mailbox.auto_reply_sender_whitelist)
       return false if sender_wl.any? && list_matches?(sender_wl, sender)
 
       begin
         msg = Mail.read_from_string(mime)
       rescue StandardError => e
-        Rails.logger.warn "Helpdesk: Mail-Parse fuer Auto-Reply-Check fehlgeschlagen: #{e.message}"
+        Rails.logger.warn "Helpdesk: mail parsing for the auto-reply check failed: #{e.message}"
         return false
       end
 
-      # NDR-Erkennung vor dem eigentlichen Auto-Reply-Check.
-      # RFC 3462: Delivery Status Notification hat immer report-type=delivery-status.
-      # Exchange-spezifische Indikatoren als Fallback.
+      # NDR detection before the actual auto-reply check.
+      # RFC 3462: a delivery status notification always has report-type=delivery-status.
+      # Exchange-specific indicators as a fallback.
       if ndr_message?(msg)
-        Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): NDR erkannt, wird verarbeitet – CT=#{msg.content_type.inspect}"
+        Rails.logger.info "Helpdesk (#{@mailbox.mailbox_address}): NDR detected, will be processed – CT=#{msg.content_type.inspect}"
         return false
       end
 
       trigger = auto_reply_trigger(msg)
       return false unless trigger
 
-      Rails.logger.debug "Helpdesk: Auto-Reply-Trigger: #{trigger}"
+      Rails.logger.debug "Helpdesk: auto-reply trigger: #{trigger}"
 
-      # Header-Whitelist: bestimmte Header:Wert-Paare heben den Filter auf.
-      # Format je Zeile: "Header-Name: Wert" oder "Header-Name: *" fuer beliebigen Wert.
+      # Header whitelist: certain header:value pairs lift the filter.
+      # Format per line: "Header-Name: Value" or "Header-Name: *" for any value.
       return false if auto_reply_header_whitelist_matches?(msg)
 
       true
@@ -502,13 +501,13 @@ module RedmineExpertHelpdesk
       AutomatedMail.trigger(msg)
     end
 
-    # Erkennt NDR-/DSN-Nachrichten, die trotz Auto-Reply-Headern verarbeitet werden sollen.
+    # Detects NDR/DSN messages that should be processed despite auto-reply headers.
     def ndr_message?(msg)
       AutomatedMail.ndr?(msg)
     end
 
-    # Entfernt Auto-Submitted-Header aus NDR-MIME, damit Redmines MailHandler
-    # die Nachricht nicht als Auto-Reply ignoriert.
+    # Strips Auto-Submitted headers from NDR MIME so Redmine's MailHandler does
+    # not ignore the message as an auto-reply.
     def strip_auto_submitted_for_ndr(mime)
       msg = Mail.read_from_string(mime)
       return mime unless ndr_message?(msg)
@@ -516,11 +515,11 @@ module RedmineExpertHelpdesk
       msg.header.fields.delete_if { |f| f.name.casecmp('auto-submitted').zero? }
       msg.to_s
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk: strip_auto_submitted_for_ndr fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk: strip_auto_submitted_for_ndr failed: #{e.message}"
       mime
     end
 
-    # Prueft, ob ein Eintrag der Header-Whitelist des Postfachs in der Mail vorkommt.
+    # Checks whether an entry from the mailbox's header whitelist occurs in the mail.
     def auto_reply_header_whitelist_matches?(msg)
       parse_list(@mailbox.auto_reply_header_whitelist).any? do |entry|
         if entry.include?(':')
@@ -533,10 +532,10 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # --- Black-/Whitelist ---------------------------------------------------
+    # --- Blacklist/whitelist ------------------------------------------------
 
-    # Eintraege (eine Adresse oder Domain pro Zeile). Whitelist gewinnt:
-    # Ist eine Whitelist gepflegt, sind nur deren Absender erlaubt.
+    # Entries (one address or domain per line). The whitelist wins: if a whitelist
+    # is maintained, only its senders are allowed.
     def sender_rejected?(sender)
       allow = parse_list(@mailbox.allow_list)
       deny  = parse_list(@mailbox.deny_list)
@@ -555,7 +554,7 @@ module RedmineExpertHelpdesk
       AutomatedMail.list_matches?(entries, sender)
     end
 
-    # --- Regeln ---------------------------------------------------------------
+    # --- Rules -----------------------------------------------------------------
 
     def ignore_rule_matches?(subject, sender)
       @mailbox.helpdesk_rules.where(:action_type => 'ignore').any? do |rule|
@@ -567,9 +566,9 @@ module RedmineExpertHelpdesk
     # rules - a matching rule is the more specific statement and may override
     # the default.
     def apply_new_issue_defaults(issue, subject, sender)
-      # Ticket neu laden, damit lock_version aktuell ist (MailHandler speichert das
-      # Ticket mehrfach, was zu StaleObjectError fuehrt, wenn wir die veraltete
-      # In-Memory-Instanz speichern wuerden).
+      # Reload the ticket so lock_version is current (MailHandler saves the
+      # ticket several times, which leads to StaleObjectError when we save the
+      # outdated in-memory instance).
       issue.reload
       changed = apply_default_assignee(issue)
       @mailbox.helpdesk_rules.where.not(:action_type => 'ignore').order(:position).each do |rule|
@@ -592,25 +591,25 @@ module RedmineExpertHelpdesk
       true
     end
 
-    # --- Phishing-Pruefung ----------------------------------------------------
+    # --- Phishing check -------------------------------------------------------
 
-    # Aktiv wenn: global eingeschaltet + im Projekt aktiviert + Spiegel nicht leer.
-    # Loggt den Grund, wenn die Pruefung uebersprungen wird.
+    # Active when: enabled globally + enabled in the project + mirror not empty.
+    # Logs the reason when the check is skipped.
     def phishing_check_enabled?
       unless Setting.plugin_redmine_expert_helpdesk['phishtank_enabled'] == '1'
-        Rails.logger.info "Helpdesk/Phishing (#{@mailbox.mailbox_address}): Pruefung uebersprungen – global deaktiviert"
+        Rails.logger.info "Helpdesk/Phishing (#{@mailbox.mailbox_address}): check skipped – disabled globally"
         return false
       end
       unless project_setting.phishing_check_enabled?
-        Rails.logger.info "Helpdesk/Phishing (#{@mailbox.mailbox_address}): Pruefung uebersprungen – im Projekt '#{@mailbox.project.identifier}' deaktiviert"
+        Rails.logger.info "Helpdesk/Phishing (#{@mailbox.mailbox_address}): check skipped – disabled in project '#{@mailbox.project.identifier}'"
         return false
       end
       unless HelpdeskPhishingUrl.exists?
-        Rails.logger.warn "Helpdesk/Phishing (#{@mailbox.mailbox_address}): Pruefung uebersprungen – PhishTank-Spiegel ist leer"
+        Rails.logger.warn "Helpdesk/Phishing (#{@mailbox.mailbox_address}): check skipped – PhishTank mirror is empty"
         return false
       end
 
-      Rails.logger.info "Helpdesk/Phishing (#{@mailbox.mailbox_address}): Pruefung aktiv (Aktion: #{phishing_action})"
+      Rails.logger.info "Helpdesk/Phishing (#{@mailbox.mailbox_address}): check active (action: #{phishing_action})"
       true
     end
 
@@ -622,8 +621,8 @@ module RedmineExpertHelpdesk
       @project_setting ||= HelpdeskProjectSetting.for_project(@mailbox.project)
     end
 
-    # Interne Notiz am Ticket: welche Phishing-URLs neutralisiert und welche
-    # verschleierten Links markiert wurden.
+    # Internal note on the ticket: which phishing URLs were neutralized and which
+    # disguised links were marked.
     def add_phishing_note(issue, hits, suspicions = [])
       sections = []
 
@@ -648,7 +647,7 @@ module RedmineExpertHelpdesk
         :private_notes => false
       )
     rescue StandardError => e
-      Rails.logger.error "Helpdesk: Phishing-Notiz fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}"
+      Rails.logger.error "Helpdesk: phishing note for ticket ##{issue.id} failed: #{e.message}"
     end
 
     # --- Autoresponder --------------------------------------------------------
@@ -660,10 +659,10 @@ module RedmineExpertHelpdesk
         :issue => issue, :contact => contact
       )
 
-      # MIME aufbauen, damit In-Reply-To / References gesetzt werden koennen.
-      # Microsoft Graph lehnt diese Header bei JSON-Anfragen (sendMail) mit HTTP 400 ab.
-      # Durch die References-Verknuepfung mit der urspruenglichen Kundenmail erkennt
-      # Redmines MailHandler Antworten auf den Autoresponder und ordnet sie dem Ticket zu.
+      # Build the MIME so In-Reply-To / References can be set.
+      # Microsoft Graph rejects these headers on JSON requests (sendMail) with HTTP 400.
+      # Via the References link to the original customer mail, Redmine's MailHandler
+      # recognises replies to the autoresponder and assigns them to the ticket.
       mail = Mail.new
       mail.from    = @mailbox.from_address
       # Opt-in only; see HelpdeskMailbox#reply_to_address.
@@ -689,7 +688,7 @@ module RedmineExpertHelpdesk
         :direction => 'out', :subject => subject, :sent_at => Time.current
       )
 
-      # Interne Notiz: Autoresponder-Versand im Ticket-Journal vermerken
+      # Internal note: record the autoresponder send in the ticket journal
       Journal.create!(
         :journalized   => issue,
         :user          => User.anonymous,
@@ -697,7 +696,7 @@ module RedmineExpertHelpdesk
         :private_notes => false
       )
     rescue MailProvider::ProviderError => e
-      Rails.logger.error "Helpdesk: Autoresponder fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}"
+      Rails.logger.error "Helpdesk: autoresponder for ticket ##{issue.id} failed: #{e.message}"
     end
 
     # The autoresponder takes the mailbox's outgoing route like every other
@@ -730,8 +729,8 @@ module RedmineExpertHelpdesk
       @provider.move_message(message_id, @mailbox.processed_folder)
     end
 
-    # Uebersprungene Mails (Blacklist, Ignorier-Regel, Auto-Reply) in den
-    # konfigurierten Ordner verschieben. Fallback: processed_folder.
+    # Moves skipped mails (blacklist, ignore rule, auto-reply) into the
+    # configured folder. Fallback: processed_folder.
     def move_skipped(message_id)
       @provider.mark_as_read(message_id)
       target = @mailbox.skipped_folder.presence || @mailbox.processed_folder.presence
@@ -740,8 +739,8 @@ module RedmineExpertHelpdesk
       @provider.move_message(message_id, target)
     end
 
-    # Fehlgeschlagene Mails (Exception waehrend der Verarbeitung) in den
-    # konfigurierten Ordner verschieben. Fallback: processed_folder.
+    # Moves failed mails (exception during processing) into the configured folder.
+    # Fallback: processed_folder.
     def move_failed(message_id)
       @provider.mark_as_read(message_id)
       target = @mailbox.failed_folder.presence || @mailbox.processed_folder.presence
@@ -750,13 +749,13 @@ module RedmineExpertHelpdesk
       @provider.move_message(message_id, target)
     end
 
-    # Haengt die originale Mail als .eml-Datei an das Ticket an.
-    # Verwendet StringIO um Probleme mit Tempfile-Lebensdauer zu vermeiden.
-    # Liefert das gespeicherte Attachment-Objekt oder nil bei Fehler.
+    # Attaches the original mail to the ticket as an .eml file.
+    # Uses StringIO to avoid Tempfile lifetime problems.
+    # Returns the stored attachment object, or nil on error.
     def attach_eml(issue, mime, author)
       filename = "original_mail_#{Time.current.strftime('%Y%m%d_%H%M%S')}.eml"
 
-      # Sicherstellen, dass die Bytes unveraendert als Binary gespeichert werden
+      # Make sure the bytes are stored unchanged as binary
       raw = mime.dup.force_encoding('BINARY')
       io  = StringIO.new(raw)
       io.define_singleton_method(:original_filename) { filename }
@@ -771,7 +770,7 @@ module RedmineExpertHelpdesk
       att.save!
       att
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk: EML-Anhang fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}\n#{e.backtrace.first(3).join('\n')}"
+      Rails.logger.warn "Helpdesk: EML attachment for ticket ##{issue.id} failed: #{e.message}\n#{e.backtrace.first(3).join('\n')}"
       nil
     end
   end

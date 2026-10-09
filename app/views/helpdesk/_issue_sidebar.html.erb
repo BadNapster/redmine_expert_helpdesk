@@ -1,5 +1,5 @@
-<%# Kundenkarte in der Ticket-Seitenleiste.
-    Wird via view_issues_sidebar_queries_bottom-Hook eingebunden. %>
+<%# Customer card in the ticket sidebar.
+    Included via the view_issues_sidebar_queries_bottom hook. %>
 <%
   inbound_msgs   = HelpdeskMessage.includes(:helpdesk_mailbox, :helpdesk_contact, :eml_attachment)
                                   .where(:issue_id => issue.id, :direction => 'in')
@@ -9,9 +9,9 @@
   ai_summaries   = HelpdeskAiSummary.where(:issue_id => issue.id).where.not(:journal_id => nil)
   previous       = contact.issues.where.not(:id => issue.id).order(:id => :desc).limit(4)
 
-  # KI-Assistent-Bereich (eigene Karte unter der Kundenkarte): nur anzeigen, wenn
-  # KI oder Wissensbasis fuer das Projekt tatsaechlich aktiv ist. Jede Zeile hat
-  # ihr eigenes Gate; die Karte erscheint, sobald mindestens ein Element sichtbar ist.
+  # AI assistant area (own card below the customer card): only shown when
+  # AI or knowledge base is actually active for the project. Each line has
+  # its own gate; the card appears as soon as at least one element is visible.
   ai_on   = RedmineExpertHelpdesk::AiFeatures.ai_enabled?
   kb_on   = RedmineExpertHelpdesk::AiFeatures.kb_enabled?
   hd_ps   = (ai_on || kb_on) ? HelpdeskProjectSetting.for_project(project) : nil
@@ -73,7 +73,7 @@
 
 </div>
 
-<%# --- KI-Assistent: eigene Karte unter der Kundenkarte (Issue-bezogen, nicht Kunde) --- %>
+<%# --- AI assistant: own card below the customer card (issue-related, not customer) --- %>
 <% if show_ai_area %>
   <h3><%= l(:label_helpdesk_ai_assistant) %></h3>
   <div class="helpdesk-sidebar-card">
@@ -87,7 +87,7 @@
       </div>
     <% end %>
 
-    <%# --- Wissensbasis (RAG): Loesungsvorschlaege --- %>
+    <%# --- Knowledge base (RAG): solution proposals --- %>
     <% if kb_props.any? %>
       <%# The summary's verdict wins over the retrieval score: what it cited
           goes first and is marked, the rest is greyed out - the sidebar and
@@ -116,7 +116,7 @@
       </ul>
     <% end %>
 
-    <%# --- Wissensbasis (RAG): manuelle Kuratierung --- %>
+    <%# --- Knowledge base (RAG): manual curation --- %>
     <% if show_kb_acts %>
       <div class="hd-kb-actions">
         <% if kb_entry&.approved? %>
@@ -176,7 +176,7 @@
 .hd-prev-tickets li { margin: 1px 0; }
 .hd-prev-tickets li::before { content: '›'; color: #aaa; margin-right: 4px; }
 
-/* Badges in Journal-Headern */
+/* Badges in journal headers */
 .helpdesk-mail-header {
   display: inline-flex;
   align-items: center;
@@ -235,8 +235,8 @@
 <script>
 //<![CDATA[
 (function() {
-  // Mail-Badges in Journal-Headern: Zuordnung ueber die direkte
-  // Journal-Verknuepfung (helpdesk_messages.journal_id).
+  // Mail badges in journal headers: association via the direct
+  // journal link (helpdesk_messages.journal_id).
 
   var hdMessages = <%= raw outgoing_msgs.map { |m|
     {
@@ -249,7 +249,7 @@
     }
   }.to_json %>;
 
-  // Eingehende Mails: Absender + Empfaenger + EML-Link als Badge im Journal-Header
+  // Incoming mails: sender + recipients + EML link as badge in the journal header
   var hdIncoming = <%= raw inbound_msgs.map { |m|
     {
       :journalId => m.journal_id,
@@ -263,7 +263,7 @@
     }
   }.to_json %>;
 
-  // KI-Zusammenfassungen: Token-Verbrauch als Badge im Journal-Header
+  // AI summaries: token usage as badge in the journal header
   var hdAiSummaries = <%= raw ai_summaries.map { |s|
     {
       :journalId => s.journal_id,
@@ -274,7 +274,7 @@
     }
   }.to_json %>;
 
-  // Liefert das Journal-Header-Element (h4) oder null. Versionsuebergreifend:
+  // Returns the journal header element (h4) or null. Across versions:
   //   Redmine 6/7: <div id="change-<journal.id>"> ... <h4 class="journal-header">
   //   Redmine 5:   <div id="journal-<journal.id>-notes"> in <div id="note-N"> ...
   //                <h4 class="note-header">
@@ -291,8 +291,8 @@
     return h4;
   }
 
-  // Einfuegeziel fuer das Badge: Redmine 6/7 direkt neben Autor/Zeit in .journal-info
-  // (sonst landet es durch das Flex-Layout ganz rechts); Redmine 5 direkt im Header.
+  // Insertion target for the badge: Redmine 6/7 directly next to author/time in .journal-info
+  // (otherwise the flex layout puts it all the way to the right); Redmine 5 directly in the header.
   function badgeTarget(h4) {
     return h4.querySelector('.journal-info') || h4;
   }
@@ -316,7 +316,7 @@
     });
   }
 
-  // Badge fuer KI-Zusammenfassungen: 🤖 <Tokens> (Tooltip: In/Out + Modell)
+  // Badge for AI summaries: 🤖 <tokens> (tooltip: In/Out + model)
   function buildAiBadge(s) {
     var wrap = document.createElement('span');
     wrap.className = 'helpdesk-mail-header';
@@ -343,7 +343,7 @@
     return wrap;
   }
 
-  // Badge fuer eingehende Mails: ✉ Name (E-Mail) 📎 Original (Groesse) Zeit
+  // Badge for incoming mails: ✉ Name (e-mail) 📎 Original (size) time
   function buildIncomingBadge(msg) {
     var wrap = document.createElement('span');
     wrap.className = 'helpdesk-mail-header';
@@ -390,6 +390,20 @@
     }
 
     return wrap;
+  }
+
+  // Pluralized "N attachments" badge label. The locale file provides the count
+  // samples (1/2/5); we select the right plural form and rebuild it with the
+  // real count.
+  var hdAttOne  = <%= raw l(:label_helpdesk_sent_attachments_count, :count => 1).to_json %>;
+  var hdAttFew  = <%= raw l(:label_helpdesk_sent_attachments_count, :count => 2).to_json %>;
+  var hdAttMany = <%= raw l(:label_helpdesk_sent_attachments_count, :count => 5).to_json %>;
+  function hdAttachmentCount(n) {
+    var m10 = n % 10, m100 = n % 100;
+    var base = (m10 === 1 && m100 !== 11) ? hdAttOne
+             : (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) ? hdAttFew
+             : hdAttMany;
+    return base.replace(/^\d+/, n);
   }
 
   // Badge for outgoing mails: ✉ recipient(s) 📎 attachments <send time>.
@@ -448,7 +462,7 @@
         var attSpan = document.createElement('span');
         attSpan.className = 'hd-addr-tag';
         attSpan.title = attFiles.join(', ');
-        attSpan.textContent = attFiles.length === 1 ? attFiles[0] : attFiles.length + ' Anh\u00e4nge';
+        attSpan.textContent = attFiles.length === 1 ? attFiles[0] : hdAttachmentCount(attFiles.length);
         wrap.appendChild(attSpan);
       }
     }

@@ -1,4 +1,4 @@
-# Speichert projekt-spezifische Helpdesk-Einstellungen aus dem Projekteinstellungen-Tab.
+# Saves project-specific helpdesk settings from the project settings tab.
 class HelpdeskProjectSettingsController < ApplicationController
   before_action :find_project_by_project_id
   before_action :require_manage_helpdesk
@@ -27,8 +27,8 @@ class HelpdeskProjectSettingsController < ApplicationController
 
     setting.save!
 
-    # Zielzeiten/Arbeitszeiten koennen sich geaendert haben -> vorberechnete
-    # SLA-Faelligkeiten der offenen Tickets neu berechnen (fuer Grid-Spalten/-Filter).
+    # Deadlines/working hours may have changed -> recompute the pre-calculated
+    # SLA deadlines of the open tickets (for grid columns/filters).
     RedmineExpertHelpdesk::Sla.refresh_project_deadlines!(@project) if sla_form
 
     flash[:notice] = l(:notice_successful_update)
@@ -42,7 +42,7 @@ class HelpdeskProjectSettingsController < ApplicationController
 
   private
 
-  # Antwort- und Phishing-Einstellungen (erstes Formular im Tab)
+  # Reply and phishing settings (first form in the tab)
   def update_reply_settings(setting)
     setting.send_reply_by_default =
       params.dig(:helpdesk_project_setting, :send_reply_by_default) == '1'
@@ -61,13 +61,13 @@ class HelpdeskProjectSettingsController < ApplicationController
     setting.phishing_action = action if HelpdeskProjectSetting::PHISHING_ACTIONS.include?(action)
   end
 
-  # SLA-Einstellungen (zweites Formular im Tab) inkl. Prioritaets-Overrides
+  # SLA settings (second form in the tab) incl. priority overrides
   def update_sla_settings(setting)
     hp = params[:helpdesk_project_setting] || {}
 
     was_enabled = setting.sla_enabled?
     setting.sla_enabled = hp[:sla_enabled] == '1'
-    # Aktivierungszeitpunkt merken: SLA gilt nur fuer Tickets ab diesem Datum
+    # Remember the activation time: SLA applies only to tickets from this date
     setting.sla_enabled_at = Time.current if setting.sla_enabled? && !was_enabled
 
     setting.sla_reaction_minutes = hp[:sla_reaction_minutes].presence
@@ -82,7 +82,7 @@ class HelpdeskProjectSettingsController < ApplicationController
     update_sla_priorities
   end
 
-  # KI-Zusammenfassungs-Einstellungen (drittes Formular im Tab)
+  # AI summary settings (third form in the tab)
   def update_ai_settings(setting)
     hp = params[:helpdesk_project_setting] || {}
 
@@ -101,8 +101,8 @@ class HelpdeskProjectSettingsController < ApplicationController
     setting.ai_include_private_notes = hp[:ai_include_private_notes] == '1'
   end
 
-  # KI-Antwortvorschlag (eigenes Formular im Tab). Teilt sich die Prompt-Modi mit
-  # der Zusammenfassung (AI_PROMPT_MODES).
+  # AI answer draft (own form in the tab). Shares the prompt modes with the
+  # summary (AI_PROMPT_MODES).
   def update_ai_answer_settings(setting)
     hp = params[:helpdesk_project_setting] || {}
 
@@ -153,7 +153,7 @@ class HelpdeskProjectSettingsController < ApplicationController
       IssueStatus.where(:id => status_id, :is_closed => false).exists? ? status_id : nil
   end
 
-  # Wissensbasis-Einstellungen (viertes Formular im Tab)
+  # Knowledge base settings (fourth form in the tab)
   def update_kb_settings(setting)
     hp = params[:helpdesk_project_setting] || {}
 
@@ -172,7 +172,7 @@ class HelpdeskProjectSettingsController < ApplicationController
     setting.kb_extract_prompt = hp[:kb_extract_prompt].to_s.strip.presence
   end
 
-  # Prioritaets-Overrides: leere Zeilen loeschen, gefuellte anlegen/aktualisieren
+  # Priority overrides: delete empty rows, create/update filled ones
   # Guards on the attachment "block" button. Both are stored blank/NULL when the
   # field is emptied, which is what makes the project fall back to the central
   # setting again - "" and 0 are meaningful values here, so they must not be it.

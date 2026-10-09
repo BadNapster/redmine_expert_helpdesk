@@ -1,10 +1,10 @@
-# View-Hooks: Kundenkarte in der Seitenleiste, Info-Leiste im Ticket-Kopf und Antwortformular
+# View hooks: customer card in the sidebar, info bar at the top of the ticket and reply form
 module RedmineExpertHelpdesk
   class Hooks < Redmine::Hook::ViewListener
-    # Stylesheet fuer Aktivitaets-Feed-Icons (eingehend/ausgehend/Erstkontakt) in den <head> einfuegen.
-    # Ab Redmine 6 zusaetzlich einen JS-Helfer bereitstellen, der SVG-Sprite-Icons erzeugt
-    # (die alten `icon icon-*`-CSS-Klassen wurden in Redmine 7 entfernt). So koennen auch per
-    # JavaScript erzeugte Elemente (Antwort-Button, Seitenleiste) korrekt Icons anzeigen.
+    # Insert the stylesheet for activity feed icons (incoming/outgoing/first contact) into the <head>.
+    # From Redmine 6 on, additionally provide a JS helper that generates SVG sprite icons
+    # (the old `icon icon-*` CSS classes were removed in Redmine 7). This way, elements
+    # created via JavaScript (reply button, sidebar) can display icons correctly too.
     def view_layouts_base_html_head(context = {})
       out = stylesheet_link_tag('helpdesk_activity', :plugin => 'redmine_expert_helpdesk')
       # Disclosure toggle of the recipients pill (_recipients_pill). Delegated on
@@ -37,9 +37,9 @@ module RedmineExpertHelpdesk
       out
     end
 
-    # Info-Leiste am Ticket-Kopf (unterhalb der Felder, kein Deface erforderlich).
-    # view_issues_show_details_bottom wird innerhalb von <div class="attributes"> gerendert.
-    # Zeigt Kontaktinfo auch wenn das erste Ticket ausgehend war (manuell zugeordnet).
+    # Info bar at the top of the ticket (below the fields, no Deface required).
+    # view_issues_show_details_bottom is rendered inside <div class="attributes">.
+    # Shows contact info even when the first ticket was outbound (manually assigned).
     def view_issues_show_details_bottom(context = {})
       issue = context[:issue]
       return '' unless issue
@@ -53,7 +53,7 @@ module RedmineExpertHelpdesk
 
       return parts.join.html_safe unless User.current.allowed_to?(:view_helpdesk_info, project)
 
-      # SLA-Box (unabhaengig vom Kundenkontakt)
+      # SLA box (independent of the customer contact)
       sla_state = RedmineExpertHelpdesk::Sla.state_for(issue)
       if sla_state && (sla_state[:reaction] || sla_state[:solution])
         parts << context[:controller].send(:render_to_string, {
@@ -64,12 +64,12 @@ module RedmineExpertHelpdesk
 
       contact = HelpdeskTicketInfo.for_issue(issue)&.helpdesk_contact
       if contact
-        # inbound ist nil wenn kein eingehendes Ticket existiert (manuell/ausgehend)
+        # inbound is nil when no inbound ticket exists (manual/outbound)
         inbound = HelpdeskMessage.incoming.includes(:eml_attachment, :helpdesk_mailbox)
                                  .where(:issue_id => issue.id)
                                  .order(:id => :asc).first
 
-        # Erstkontakt ausgehend ("Neues Helpdesk-Ticket"): initiale Mail anzeigen
+        # Outbound first contact ("New Helpdesk Ticket"): show the initial mail
         outbound = nil
         if inbound.nil?
           outbound = HelpdeskMessage.where(:issue_id => issue.id, :direction => %w[out init])
@@ -98,14 +98,14 @@ module RedmineExpertHelpdesk
       parts.join.html_safe
     end
 
-    # Kundenkarte in der Ticket-Seitenleiste (nach den Suchabfragen)
-    # Wird auf der Issue-Show-Seite UND der Issue-Liste ausgefuehrt;
-    # Guard auf @issue stellt sicher, dass nur die Show-Seite gerendert wird.
-    # Zeigt Kontaktinfo auch fuer manuell/ausgehend zugeordnete Tickets.
+    # Customer card in the ticket sidebar (after the saved queries)
+    # Runs on the issue show page AND the issue list;
+    # the guard on @issue ensures that only the show page is rendered.
+    # Shows contact info also for manually/outbound assigned tickets.
     def view_issues_sidebar_queries_bottom(context = {})
       issue = context[:controller]&.instance_variable_get(:@issue)
-      # Ohne @issue ist es die Ticket-Liste: dort den "Wartet auf Bearbeitung"-Zaehler
-      # zeigen. Rendert einmal pro Seite (nicht pro Zeile), ein COUNT genuegt.
+      # Without @issue it is the ticket list: show the "awaiting agent" counter
+      # there. Rendered once per page (not per row), one COUNT is enough.
       return awaiting_agent_counter(context) unless issue
 
       project = issue.project
@@ -114,7 +114,7 @@ module RedmineExpertHelpdesk
       contact = HelpdeskTicketInfo.for_issue(issue)&.helpdesk_contact
 
       if contact.nil?
-        # Kein Kontakt: Zuordnungsformular in der Seitenleiste anzeigen
+        # No contact: show the assignment form in the sidebar
         return '' unless User.current.allowed_to?(:send_helpdesk_reply, project)
         mailboxes = project.helpdesk_mailboxes.enabled.to_a
         return '' if mailboxes.empty?
@@ -129,7 +129,7 @@ module RedmineExpertHelpdesk
         })
       end
 
-      # Kontakt vorhanden: Kundenkarte anzeigen
+      # Contact exists: show the customer card
       return '' unless User.current.allowed_to?(:view_helpdesk_info, project)
 
       outgoing_msgs = HelpdeskMessage.outgoing
@@ -166,8 +166,8 @@ module RedmineExpertHelpdesk
       parts.join.html_safe
     end
 
-    # "Helpdesk-Ticket erstellen"-Sektion im neuen Ticket-Formular.
-    # Ermoeglicht das Versenden einer initialen Mail direkt beim Anlegen des Tickets.
+    # "Create Helpdesk Ticket" section in the new ticket form.
+    # Enables sending an initial mail directly when creating the ticket.
     def view_issues_form_details_bottom(context = {})
       issue = context[:issue]
       return '' unless issue.new_record?
@@ -190,8 +190,8 @@ module RedmineExpertHelpdesk
       })
     end
 
-    # Controller-Hook: verknuepft Kundenkontakt und sendet optional initiale Mail nach
-    # dem Erstellen eines neuen Tickets, wenn helpdesk_init-Parameter uebergeben wurden.
+    # Controller hook: links the customer contact and optionally sends an initial mail after
+    # a new ticket is created, when helpdesk_init parameters were passed.
     def controller_issues_new_after_save(context = {})
       issue  = context[:issue]
       params = context[:params]
@@ -222,11 +222,11 @@ module RedmineExpertHelpdesk
       Rails.logger.error("Helpdesk InitMailer (new issue): #{e.message}\n#{e.backtrace.first(3).join("\n")}")
     end
 
-    # Controller-Hook: verknuepft das beim Issue-Update erstellte Journal mit der
-    # zuvor per AJAX versendeten Kundenantwort (HelpdeskMessage). Die Message-ID
-    # wird vom Antwortformular als Hidden-Field mitgeschickt (deterministisch,
-    # kein Timestamp-Matching). Zusaetzlich: SLA-Tracking (erste Reaktion,
-    # Loesungszeit beim Schliessen, Reset beim Wiedereroeffnen).
+    # Controller hook: links the journal created on issue update with the
+    # customer reply sent earlier via AJAX (HelpdeskMessage). The message ID
+    # is sent along by the reply form as a hidden field (deterministic,
+    # no timestamp matching). Additionally: SLA tracking (first reaction,
+    # solution time on close, reset on reopen).
     def controller_issues_edit_after_save(context = {})
       journal = context[:journal]
       issue   = context[:issue]
@@ -238,9 +238,9 @@ module RedmineExpertHelpdesk
         msg&.update_column(:journal_id, journal.id)
       end
 
-      # Der eingefuegte KI-Entwurf wurde gespeichert - unabhaengig davon, ob er
-      # auch als Mail rausging. Ohne diese Markierung liest der
-      # KnowledgeExtractor den Text beim Schliessen als Loesung wieder ein.
+      # The inserted AI draft was saved - regardless of whether it
+      # was also sent out as mail. Without this marker, the
+      # KnowledgeExtractor would re-ingest the text as a solution when closing.
       if journal && journal.notes.present? &&
          context[:params] && context[:params][:hd_ai_drafted].to_s == '1' &&
          normalized_ai_draft_text(journal.notes) != base
@@ -250,26 +250,26 @@ module RedmineExpertHelpdesk
         end
       end
 
-      # SLA: oeffentlicher Kommentar eines Mitarbeiters stoppt die Reaktionsuhr
+      # SLA: a public comment by an agent stops the reaction clock
       if issue && journal && journal.notes.present? && !journal.private_notes?
         RedmineExpertHelpdesk::Sla.record_first_response!(issue, journal.created_on || Time.current,
                                                           :by => journal.user || User.current)
       end
 
-      # SLA: Loesungszeit beim Schliessen setzen / beim Wiedereroeffnen zuruecksetzen
-      # (Wissensbasis-Aufnahme laeuft ueber Issue#after_save, damit auch Bulk-/API-
-      # Aenderungen erfasst werden – siehe patches/issue_patch.rb).
+      # SLA: set the solution time on close / reset it on reopen
+      # (knowledge base ingest runs via Issue#after_save so that bulk/API
+      # changes are captured too – see patches/issue_patch.rb).
       RedmineExpertHelpdesk::Sla.sync_solution!(issue) if issue&.saved_change_to_status_id?
     rescue StandardError => e
-      Rails.logger.warn("Helpdesk: edit_after_save-Hook fehlgeschlagen: #{e.message}")
+      Rails.logger.warn("Helpdesk: edit_after_save hook failed: #{e.message}")
     end
 
     def normalized_ai_draft_text(text)
       text.to_s.gsub(/\r\n?/, "\n").rstrip
     end
 
-    # Button "Neues Helpdesk-Ticket" in der Ticket-Liste (neben "Neues Ticket").
-    # Wird per JavaScript in den Kontextbereich eingefuegt.
+    # "New Helpdesk Ticket" button in the ticket list (next to "New Ticket").
+    # Inserted into the context area via JavaScript.
     def view_issues_index_bottom(context = {})
       project = context[:project]
       return '' unless project&.module_enabled?(:helpdesk)
@@ -399,9 +399,9 @@ module RedmineExpertHelpdesk
       })
     end
 
-    # Zaehler "Wartet auf Bearbeitung" fuer die Seitenleiste der Ticket-Liste.
-    # Verlinkt auf denselben Filter wie die Query-Spalte, damit Zaehler und Liste
-    # uebereinstimmen.
+    # "Awaiting agent" counter for the ticket list sidebar.
+    # Links to the same filter as the query column so that counter and list
+    # agree.
     def awaiting_agent_counter(context)
       return '' unless HelpdeskTicketInfo.awaiting_agent_enabled?
 
@@ -424,7 +424,7 @@ module RedmineExpertHelpdesk
         :locals  => { :count => count, :project => project }
       })
     rescue StandardError => e
-      Rails.logger.warn("Helpdesk: awaiting_agent_counter fehlgeschlagen: #{e.message}")
+      Rails.logger.warn("Helpdesk: awaiting_agent_counter failed: #{e.message}")
       ''
     end
   end

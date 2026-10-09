@@ -1,15 +1,15 @@
-# Prueft offene Tickets in SLA-Projekten auf Ueberschreitungen und versendet
-# einmalig eine Benachrichtigung (E-Mail-Adresse und/oder Projekt-User aus den
-# Projekteinstellungen). Frischt zudem die vorberechneten SLA-Faelligkeiten aller
-# SLA-Projekte auf (Backfill/Aktualisierung fuer die Grid-Spalten). Ausgeloest per
-# eigenem helpdesk/sla_check-Endpunkt (kein Scheduler); Cache-Lock verhindert
-# parallele Laeufe.
+# Checks open tickets in SLA projects for breaches and sends a one-time
+# notification (email address and/or project users from the project settings).
+# Also refreshes the precomputed SLA deadlines of all SLA projects
+# (backfill/update for the grid columns). Triggered via the dedicated
+# helpdesk/sla_check endpoint (no scheduler); a cache lock prevents
+# parallel runs.
 module RedmineExpertHelpdesk
   class SlaBreachCheck
     LOCK_KEY = 'redmine_expert_helpdesk/sla_breach_check_lock'.freeze
 
-    # Liefert die Anzahl versendeter Benachrichtigungen, oder false wenn bereits
-    # ein Lauf aktiv ist (Lock gehalten -> kein ueberlappender Check).
+    # Returns the number of notifications sent, or false when a run is already
+    # active (lock held -> no overlapping check).
     def self.run_if_due
       return false unless Rails.cache.write(LOCK_KEY, Time.current.to_i, :unless_exist => true, :expires_in => 10.minutes)
 
@@ -20,7 +20,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Liefert die Anzahl versendeter Benachrichtigungen.
+    # Returns the number of notifications sent.
     def self.run
       refresh_all_deadlines
       notified = 0
@@ -55,18 +55,18 @@ module RedmineExpertHelpdesk
           info.save!
           HelpdeskSlaMailer.deliver_sla_breach(recipients, issue, breached, state)
           notified += 1
-          Rails.logger.warn "Helpdesk/SLA: Ueberschreitung Ticket ##{issue.id} (#{breached.join(', ')}) – Benachrichtigung an #{recipients.join(', ')}"
+          Rails.logger.warn "Helpdesk/SLA: breach on ticket ##{issue.id} (#{breached.join(', ')}) – notification sent to #{recipients.join(', ')}"
         rescue StandardError => e
-          Rails.logger.error "Helpdesk/SLA: Breach-Check fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}"
+          Rails.logger.error "Helpdesk/SLA: breach check for ticket ##{issue.id} failed: #{e.message}"
         end
       end
 
       notified
     end
 
-    # Vorberechnete SLA-Faelligkeiten aller aktiven SLA-Projekte auffrischen
-    # (unabhaengig von der Benachrichtigung), damit die Grid-Spalten/-Filter
-    # aktuell bleiben und Bestandstickets nachtraeglich befuellt werden.
+    # Refresh the precomputed SLA deadlines of all active SLA projects
+    # (independent of the notification), so the grid columns/filters stay
+    # current and existing tickets get backfilled.
     def self.refresh_all_deadlines
       HelpdeskProjectSetting.where(:sla_enabled => true).find_each do |setting|
         project = Project.find_by(:id => setting.project_id)
@@ -74,7 +74,7 @@ module RedmineExpertHelpdesk
 
         Sla.refresh_project_deadlines!(project)
       rescue StandardError => e
-        Rails.logger.error "Helpdesk/SLA: Deadline-Refresh fuer Projekt #{setting.project_id} fehlgeschlagen: #{e.message}"
+        Rails.logger.error "Helpdesk/SLA: deadline refresh for project #{setting.project_id} failed: #{e.message}"
       end
     end
 

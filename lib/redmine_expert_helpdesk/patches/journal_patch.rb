@@ -38,7 +38,7 @@ module RedmineExpertHelpdesk
 
         HelpdeskTicketInfo.clear_awaiting_agent!(issue)
       rescue StandardError => e
-        Rails.logger.warn("Helpdesk: clear_awaiting_agent (Journal ##{id}) fehlgeschlagen: #{e.message}")
+        Rails.logger.warn("Helpdesk: clear_awaiting_agent (Journal ##{id}) failed: #{e.message}")
       end
     end
   end

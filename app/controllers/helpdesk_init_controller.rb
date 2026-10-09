@@ -1,5 +1,5 @@
-# Verknuepft einen Kundenkontakt manuell mit einem bestehenden Ticket
-# und sendet optional eine initiale Helpdesk-Mail.
+# Manually links a customer contact with an existing ticket
+# and optionally sends an initial helpdesk mail.
 class HelpdeskInitController < ApplicationController
   before_action :find_project_by_project_id
   before_action :authorize

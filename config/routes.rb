@@ -1,21 +1,21 @@
-# Routen des Expert-Helpdesk-Plugins
+# Routes of the Expert Helpdesk plugin
 RedmineApp::Application.routes.draw do
-  # Manueller Mailabruf pro Projekt (Button in den Projekteinstellungen)
+  # Manual mail fetch per project (button in the project settings)
   post 'projects/:project_id/helpdesk/fetch', :to => 'helpdesk_fetch#fetch', :as => 'project_helpdesk_fetch'
 
-  # Globaler Abruf aller aktiven Postfaecher (z. B. via curl/CronJob), gesichert per API-Key
+  # Global fetch of all active mailboxes (e.g. via curl/cron job), secured by an API key
   match 'helpdesk/fetch_all', :to => 'helpdesk_fetch#fetch_all', :via => [:get, :post], :as => 'helpdesk_fetch_all'
 
   # Maintenance mode for upgrades: GET status, POST enabled=1|0 (fetch API key)
   match 'helpdesk/maintenance', :to => 'helpdesk_fetch#maintenance', :via => [:get, :post], :as => 'helpdesk_maintenance'
 
-  # SLA-Pruefung fuer externen CronJob, gesichert per eigenem API-Key
+  # SLA check for an external cron job, secured by its own API key
   match 'helpdesk/sla_check', :to => 'helpdesk_fetch#sla_check', :via => [:get, :post], :as => 'helpdesk_sla_check'
 
-  # Manueller PhishTank-Sync (Button in den Plugin-Einstellungen, nur Admins)
+  # Manual PhishTank sync (button in the plugin settings, admins only)
   post 'helpdesk/phishtank_sync', :to => 'helpdesk_phishtank#sync', :as => 'helpdesk_phishtank_sync'
 
-  # Import der Altdaten aus redmine_contacts (Button in den Plugin-Einstellungen, nur Admins)
+  # Import of legacy data from redmine_contacts (button in the plugin settings, admins only)
   get  'helpdesk/legacy_import/select', :to => 'helpdesk_legacy_import#new', :as => 'helpdesk_legacy_import_select'
   post 'helpdesk/legacy_import', :to => 'helpdesk_legacy_import#import', :as => 'helpdesk_legacy_import'
   # EML attachments: project selection, then repair (onto the issue) or restore (back to RedmineUP)
@@ -30,18 +30,18 @@ RedmineApp::Application.routes.draw do
   get  'helpdesk/legacy_import/runs/:id/status', :to => 'helpdesk_legacy_import#poll',
        :as => 'helpdesk_legacy_import_run_status', :constraints => { :id => /\d+/ }
 
-  # OAuth2-Consent (authorization_code) fuer IMAP/SMTP-Postfaecher.
-  # Die Callback-URL ist fest, weil Identity Provider nur exakt registrierte
-  # Redirect-URIs akzeptieren; das Postfach steckt im signierten state-Parameter.
+  # OAuth2 consent (authorization_code) for IMAP/SMTP mailboxes.
+  # The callback URL is fixed because identity providers only accept exactly
+  # registered redirect URIs; the mailbox is carried in the signed state parameter.
   get 'helpdesk/oauth/authorize', :to => 'expert_helpdesk_oauth#authorize', :as => 'expert_helpdesk_oauth_authorize'
   get 'helpdesk/oauth/callback',  :to => 'expert_helpdesk_oauth#callback',  :as => 'expert_helpdesk_oauth_callback'
 
-  # Postfach-Konfiguration je Projekt
+  # Mailbox configuration per project
   scope 'projects/:project_id' do
     resources :helpdesk_mailboxes, :except => [:index, :show] do
       collection do
-        # POST, weil der Formularzustand (inkl. Provider-Auswahl) mitgeschickt wird;
-        # GET bleibt aus Kompatibilitaetsgruenden erhalten.
+        # POST because the form state (including the provider selection) is submitted;
+        # GET stays for compatibility reasons.
         get  :folders
         post :folders
         post :create_folder
@@ -52,7 +52,7 @@ RedmineApp::Application.routes.draw do
       end
     end
 
-    # Kundenliste und -bearbeitung je Projekt
+    # Customer list and editing per project
     resources :helpdesk_contacts, :only => [:index, :edit, :update, :destroy] do
       collection do
         get :autocomplete
@@ -63,7 +63,7 @@ RedmineApp::Application.routes.draw do
       end
     end
 
-    # Projekt-spezifische Helpdesk-Einstellungen (Antwort-Standardwerte)
+    # Project-specific Helpdesk settings (reply defaults)
     resource :helpdesk_project_setting, :only => [:update]
 
     # Knowledge base tab: list, verify and correct RAG entries (view/edit/manage_helpdesk_kb)
@@ -85,28 +85,28 @@ RedmineApp::Application.routes.draw do
     # settings; entries are added from the ticket page, see below)
     resources :helpdesk_attachment_blacklists, :only => [:destroy]
 
-    # SLA-Statistik je Projekt (nur sichtbar/erreichbar bei aktivem SLA)
+    # SLA statistics per project (only visible/reachable when SLA is active)
     resources :helpdesk_sla_statistics, :only => [:index]
 
     # Ticket statistics per project (member permission view_helpdesk_ticket_statistics)
     resources :helpdesk_ticket_statistics, :only => [:index]
 
-    # KI-Statistik je Projekt (nur mit globaler Berechtigung view_helpdesk_ai_statistics)
+    # AI statistics per project (only with the global view_helpdesk_ai_statistics permission)
     resources :helpdesk_ai_statistics, :only => [:index]
 
-    # REST-API (projektbezogen: Liste/Anlegen), JSON/XML via .api.rsb
+    # REST API (project-scoped: list/create), JSON/XML via .api.rsb
     resources :helpdesk_contacts_api, :path => 'helpdesk/contacts',
               :controller => 'helpdesk_contacts_api', :only => [:index, :create]
     resources :helpdesk_tickets_api, :path => 'helpdesk/tickets',
               :controller => 'helpdesk_tickets_api', :only => [:index, :create]
     resources :helpdesk_mailboxes_api, :path => 'helpdesk/mailboxes',
               :controller => 'helpdesk_mailboxes_api', :only => [:index, :create]
-    # Projekt-Helpdesk-Einstellungen (Singleton je Projekt)
+    # Project Helpdesk settings (singleton per project)
     resource :helpdesk_project_setting_api, :path => 'helpdesk/settings',
              :controller => 'helpdesk_project_settings_api', :only => [:show, :update]
   end
 
-  # REST-API (global per ID: Anzeigen/Aendern/Loeschen)
+  # REST API (global by ID: show/edit/delete)
   resources :helpdesk_contacts_api, :path => 'helpdesk/contacts',
             :controller => 'helpdesk_contacts_api', :only => [:show, :update, :destroy]
   resources :helpdesk_tickets_api, :path => 'helpdesk/tickets',
@@ -118,7 +118,7 @@ RedmineApp::Application.routes.draw do
     end
   end
 
-  # Regeln je Postfach
+  # Rules per mailbox
   resources :helpdesk_mailboxes, :only => [] do
     resources :helpdesk_rules, :only => [:create, :destroy]
   end
@@ -128,7 +128,7 @@ RedmineApp::Application.routes.draw do
   resources :helpdesk_reply_templates, :except => [:show],
             :as => :global_helpdesk_reply_templates
 
-  # Antwort an den Kunden aus dem Ticket heraus
+  # Reply to the customer from the ticket
   post 'issues/:issue_id/helpdesk_reply', :to => 'helpdesk_replies#create', :as => 'issue_helpdesk_reply'
 
   # Blacklisting an attachment's content from the ticket page. Keyed by the
@@ -149,14 +149,14 @@ RedmineApp::Application.routes.draw do
   post 'issues/:issue_id/helpdesk_note_content', :to => 'helpdesk_note_content#create',
        :as => 'issue_helpdesk_note_content'
 
-  # KI-Zusammenfassung manuell (neu) erzeugen (Button in der Ticket-Seitenleiste)
+  # Manually (re)generate the AI summary (button in the ticket sidebar)
   post 'issues/:issue_id/helpdesk_ai_summary', :to => 'helpdesk_ai#regenerate', :as => 'issue_helpdesk_regenerate_ai'
 
-  # Wissensbasis: Ticket manuell aufnehmen / pending-Eintrag freigeben
+  # Knowledge base: manually ingest a ticket / release a pending entry
   post 'issues/:issue_id/helpdesk_kb_ingest',  :to => 'helpdesk_knowledge#ingest',  :as => 'issue_helpdesk_kb_ingest'
   post 'issues/:issue_id/helpdesk_kb_approve', :to => 'helpdesk_knowledge#approve', :as => 'issue_helpdesk_kb_approve'
 
-  # Kontakt manuell zuordnen / initiale Mail senden (bestehende Tickets)
+  # Manually assign a contact / send the initial mail (existing tickets)
   scope 'projects/:project_id' do
     post 'issues/:issue_id/helpdesk_init', :to => 'helpdesk_init#create', :as => 'issue_helpdesk_init'
   end

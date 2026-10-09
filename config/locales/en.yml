@@ -126,6 +126,24 @@ en:
   error_helpdesk_provider_not_configured: Mail provider is not fully configured.
   error_helpdesk_missing_parameters: Missing parameters.
   error_helpdesk_access_denied: Access denied.
+  error_helpdesk_invalid_api_key: Invalid API key.
+  button_helpdesk_load_folders: 'Load folders'
+  title_helpdesk_load_folders: 'Load the folder list from the mailbox'
+  label_helpdesk_show_folder_list: 'Show the folder list'
+  label_helpdesk_create_folder: 'create'
+  label_helpdesk_error_prefix: 'Error:'
+  label_helpdesk_unknown_error: 'unknown'
+  text_helpdesk_no_folders_loaded: 'No folders loaded yet – use "%{button}"'
+  text_helpdesk_no_folders_present: 'No folders present'
+  text_helpdesk_loading_folders: 'Loading folders…'
+  text_helpdesk_folders_loaded: 'Folders loaded:'
+  text_helpdesk_creating_folders: 'Creating folders…'
+  text_helpdesk_confirm_create_folders: 'The folders %{names} do not exist yet. Create them in the mailbox now?'
+  error_helpdesk_network_error: 'Network error'
+  error_helpdesk_folder_creation_failed: 'The folder could not be created:'
+  text_helpdesk_azure_hint_graph: 'Graph mailboxes: application permissions <code>Mail.ReadWrite</code>, <code>Mail.Send</code> (admin consent required)'
+  text_helpdesk_azure_hint_imap: 'IMAP/SMTP mailboxes (application only): <code>IMAP.AccessAsApp</code>, <code>SMTP.SendAsApp</code>'
+  text_helpdesk_azure_hint_policy: 'Restrict access to the helpdesk mailboxes via <code>ApplicationAccessPolicy</code>'
 
   label_helpdesk_reopen: Status on customer reply
   field_helpdesk_reopen_status: Status (closed issue)
@@ -502,6 +520,9 @@ en:
   label_helpdesk_mail_footer_preview: Signature preview
   label_helpdesk_reply_addresses_hint: "Separate multiple addresses with a comma"
   label_helpdesk_reply_attachments: "Attachments"
+  label_helpdesk_sent_attachments_count:
+    one: '%{count} attachment'
+    other: '%{count} attachments'
   button_helpdesk_add_original_recipients: "original recipients"
   title_helpdesk_original_recipients: "Recipients of the original customer mail"
   field_helpdesk_reply_transport: "Send via"

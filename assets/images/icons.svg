@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg">
   <!--
-    Icon-Sprite fuer den Redmine-Aktivitaets-Feed und das Administrationsmenue.
-    Quellen:
+    Icon sprite for the Redmine activity feed and the administration menu.
+    Sources:
       - helpdesk-message-{in|out|init}: Bootstrap Icons v1.11 (MIT, https://icons.getbootstrap.com/)
-      - helpdesk (Admin-Menue): Tabler Icons "headset" (MIT, https://tabler.io/icons) -
-        gleiche Icon-Familie wie Redmines Kern-Sprite (Outline, 24x24, Strichbreite/Farbe
-        kommen aus der .icon-svg-CSS-Klasse), damit der Eintrag optisch zu den anderen
-        Admin-Menue-Icons passt.
-    Verwendet von sprite_icon('helpdesk-message-{in|out|init}', plugin: 'redmine_expert_helpdesk')
-    sowie sprite_icon('helpdesk', plugin: 'redmine_expert_helpdesk') fuer den Admin-Menue-Eintrag.
+      - helpdesk (admin menu): Tabler Icons "headset" (MIT, https://tabler.io/icons) -
+        same icon family as Redmine's core sprite (outline, 24x24; stroke width/colour
+        come from the .icon-svg CSS class), so the entry matches the other
+        admin-menu icons visually.
+    Used by sprite_icon('helpdesk-message-{in|out|init}', plugin: 'redmine_expert_helpdesk')
+    and sprite_icon('helpdesk', plugin: 'redmine_expert_helpdesk') for the admin-menu entry.
   -->
 
-  <!-- Helpdesk / Support (headset, Tabler-Outline-Stil wie Redmine-Kern-Icons) -->
+  <!-- Helpdesk / support (headset, Tabler outline style like Redmine core icons) -->
   <symbol id="icon--helpdesk" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
     <path d="M4 14v-3a8 8 0 0 1 16 0v3"/>
     <path d="M18 19c0 1.657 -2.686 3 -6 3"/>
@@ -19,19 +19,19 @@
     <path d="M20 14a2 2 0 0 0 -2 -2h-1a1 1 0 0 0 -1 1v4a1 1 0 0 0 1 1h1a2 2 0 0 0 2 -2v-2z"/>
   </symbol>
 
-  <!-- Eingehende E-Mail (envelope-arrow-down) -->
+  <!-- Incoming mail (envelope-arrow-down) -->
   <symbol id="icon--helpdesk-message-in" viewBox="0 0 16 16">
     <path fill="currentColor" d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4.5a.5.5 0 0 1-1 0V5.383l-7 4.2-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h5.5a.5.5 0 0 1 0 1H2a2 2 0 0 1-2-1.99zm1 7.105 4.708-2.897L1 5.383zM1 4v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1"/>
     <path fill="currentColor" d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.354-1.646a.5.5 0 0 1-.722-.016l-1.149-1.25a.5.5 0 0 1 .737-.676l.28.305V11a.5.5 0 0 1 1 0v1.793l.396-.397a.5.5 0 0 1 .708.708z"/>
   </symbol>
 
-  <!-- Ausgehende E-Mail (envelope-arrow-up) -->
+  <!-- Outgoing mail (envelope-arrow-up) -->
   <symbol id="icon--helpdesk-message-out" viewBox="0 0 16 16">
     <path fill="currentColor" d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v4.5a.5.5 0 0 1-1 0V5.383l-7 4.2-1.326-.795-5.64 3.47A1 1 0 0 0 2 13h5.5a.5.5 0 0 1 0 1H2a2 2 0 0 1-2-1.99zm1 7.105 4.708-2.897L1 5.383zM1 4v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1"/>
     <path fill="currentColor" d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7m.354-5.354 1.25 1.25a.5.5 0 0 1-.708.708L13 12.207V14a.5.5 0 0 1-1 0v-1.717l-.28.305a.5.5 0 0 1-.737-.676l1.149-1.25a.5.5 0 0 1 .722-.016"/>
   </symbol>
 
-  <!-- Erstkontakt / Ticket-Erstellung (envelope-open) -->
+  <!-- First contact / ticket creation (envelope-open) -->
   <symbol id="icon--helpdesk-message-init" viewBox="0 0 16 16">
     <path fill="currentColor" d="M8.47 1.318a1 1 0 0 0-.94 0l-6 3.2A1 1 0 0 0 1 5.4v.817l5.75 3.45L8 8.917l1.25.75L15 6.217V5.4a1 1 0 0 0-.53-.882zM15 7.383l-4.778 2.867L15 13.117zm-.035 6.88L8 10.082l-6.965 4.18A1 1 0 0 0 2 15h12a1 1 0 0 0 .965-.738ZM1 13.116l4.778-2.867L1 7.383v5.734ZM7.059.435a2 2 0 0 1 1.882 0l6 3.2A2 2 0 0 1 16 5.4V14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V5.4a2 2 0 0 1 1.059-1.765z"/>
   </symbol>

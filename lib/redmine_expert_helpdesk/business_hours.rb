@@ -1,7 +1,7 @@
-# Geschaeftszeit-Rechner fuer die SLA-Uhren.
-# Arbeitszeiten kommen aus HelpdeskProjectSetting: Wochentage (ISO, Mo=1..So=7)
-# und eine Zeitspanne (HH:MM bis HH:MM). SLA-Zeiten laufen nur innerhalb
-# dieser Fenster.
+# Business-hours calculator for the SLA clocks.
+# Working hours come from HelpdeskProjectSetting: weekdays (ISO, Mon=1..Sun=7)
+# and a time span (HH:MM to HH:MM). SLA times only run within
+# these windows.
 module RedmineExpertHelpdesk
   class BusinessHours
     MAX_LOOKAHEAD_DAYS = 400
@@ -13,7 +13,7 @@ module RedmineExpertHelpdesk
       @end_min   = @start_min if @end_min < @start_min
     end
 
-    # Geschaeftsminuten zwischen zwei Zeitpunkten (>= 0).
+    # Business minutes between two points in time (>= 0).
     def elapsed_minutes(from, to)
       return 0 if from.nil? || to.nil? || to <= from
 
@@ -30,8 +30,8 @@ module RedmineExpertHelpdesk
       total
     end
 
-    # Zeitpunkt, an dem +minutes+ Geschaeftsminuten ab +from+ verstrichen sind
-    # (Faelligkeit). Liefert nil wenn keine Arbeitstage konfiguriert sind.
+    # Point in time at which +minutes+ business minutes have elapsed from +from+
+    # (due date). Returns nil when no working days are configured.
     def due_at(from, minutes)
       return nil if from.nil? || minutes.to_i <= 0 || @days.empty?
 
@@ -71,13 +71,12 @@ module RedmineExpertHelpdesk
       [[m[1].to_i, 23].min * 60 + [m[2].to_i, 59].min, 0].max
     end
 
-    # Zeitpunkt auf +date+ um +minutes_from_midnight+ in der LOKALEN Zeitzone des
-    # Servers. Geschaeftszeiten (z. B. 08:00-17:00) sind lokale Buerozeiten und
-    # muessen unabhaengig von der ambient Time.zone gelten: In Hintergrundjobs
-    # (SLA-Cron) und fuer Benutzer ohne Zeitzonen-Einstellung ist Time.zone haeufig
-    # UTC, wodurch die Buerozeiten faelschlich nach UTC verschoben wuerden
-    # (z. B. 08:00 als 08:00 UTC = 10:00 lokal). Die Anzeige nutzt ebenfalls die
-    # lokale Serverzeit, daher ist dies konsistent.
+    # Point in time on +date+ at +minutes_from_midnight+ in the LOCAL time zone of
+    # the server. Business hours (e.g. 08:00-17:00) are local office hours and must
+    # hold regardless of the ambient Time.zone: in background jobs (SLA cron) and
+    # for users without a time zone setting, Time.zone is often UTC, which would
+    # wrongly shift the office hours to UTC (e.g. 08:00 as 08:00 UTC = 10:00
+    # local). The display also uses the local server time, so this is consistent.
     def time_on(date, minutes_from_midnight)
       Time.local(date.year, date.month, date.day) + minutes_from_midnight * 60
     end

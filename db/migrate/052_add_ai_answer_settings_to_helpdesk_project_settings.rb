@@ -1,4 +1,4 @@
-# Per-project control of the AI answer draft ("KI-Antwortvorschlag"):
+# Per-project control of the AI answer draft ("AI answer suggestion"):
 # a button in the note toolbar that writes a customer-facing reply for the
 # ticket, grounded in the project's knowledge base.
 #

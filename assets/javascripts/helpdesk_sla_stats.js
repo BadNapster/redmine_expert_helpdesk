@@ -1,12 +1,12 @@
 /*
- * SLA-Statistik: rendert die Diagramme mit Chart.js (lokal gebundelt).
- * Daten kommen aus einem JSON-Insel-Element (#hd-sla-stats-data), es wird kein
- * inline ausfuehrbares Script benoetigt (CSP-freundlich).
+ * SLA statistics: renders the charts with Chart.js (bundled locally).
+ * Data comes from a JSON island (#hd-sla-stats-data), no inline executable
+ * script is needed (CSP friendly).
  *
- * Beschriftungen: mengenbasierte Diagramme (Volumen/Stoßzeiten) zeigen absolute
- * Anzahlen auf den Balken (Prozente im Tooltip); die SLA-Erfüllung zeigt die
- * Erfüllungsquote (met%) als 0–100%-Balken. So entstehen keine irrefuehrenden
- * "100%" wenn alle Daten in einem Bucket/Segment liegen.
+ * Labels: count based charts (volume / busiest times) show absolute numbers on
+ * the bars (percentages in the tooltip); the SLA compliance chart shows the
+ * fulfilment rate (met%) as 0-100% bars. This avoids misleading "100%" when all
+ * data lies in a single bucket/segment.
  */
 (function () {
   'use strict';
@@ -33,7 +33,7 @@
 
   function plugins() { return HAS_DL ? [ChartDataLabels] : []; }
 
-  // Tooltip: "Label: Wert (P%)" relativ zur Datensatz-Summe.
+  // Tooltip: "Label: value (P%)" relative to the dataset sum.
   function tipDatasetPct(item) {
     var sum = item.chart.data.datasets[item.datasetIndex].data.reduce(function (a, b) { return a + (b || 0); }, 0);
     var p = sum ? Math.round(item.raw / sum * 100) : 0;
@@ -55,7 +55,7 @@
     };
   }
 
-  // Datalabels: absolute Anzahl ueber dem Balken (nur wenn > 0).
+  // Datalabels: absolute count above the bar (only when > 0).
   function countLabels() {
     return { anchor: 'end', align: 'end', offset: 0, clamp: true, display: 'auto',
              color: '#555', font: { size: 10, weight: 'bold' },
@@ -86,7 +86,7 @@
     var c = ctx('hd-chart-avg');
     if (!c || !d.avgTrend) { return; }
     var o = baseOptions();
-    o.plugins.datalabels = { display: false }; // Dauer, kein Prozent
+    o.plugins.datalabels = { display: false }; // duration, no percentages
     o.plugins.tooltip = { callbacks: { label: function (i) { return i.dataset.label + ': ' + fmtMinutes(i.parsed.y); } } };
     o.scales.y.ticks = { precision: 0, callback: function (v) { return fmtMinutes(v); } };
     new Chart(c, {
@@ -105,8 +105,8 @@
     });
   }
 
-  // SLA-Erfuellung als Erfuellungsquote je Uhr (met% ueber abgeschlossene Uhren,
-  // 0–100%). Kein "100% wenn nur ein Segment" mehr; Tooltip zeigt die Anzahlen.
+  // SLA compliance as a fulfilment rate per clock (met% over completed clocks,
+  // 0-100%). No more "100% if only one segment"; the tooltip shows the counts.
   function renderCompliance(d) {
     var c = ctx('hd-chart-compliance');
     if (!c || !d.compliance) { return; }
@@ -178,8 +178,8 @@
     }
   }
 
-  // Zeitraum-Presets nach ungefaehrer Spanne (Tage) und sinnvoller Default je
-  // Gruppierung, damit z. B. "Tag" nicht ein ganzes Jahr an Tagesbalken zeigt.
+  // Range presets by approximate span (days) and a sensible default per
+  // grouping, so "day" does not show a whole year of daily bars.
   var RANGE_SPAN = {
     last_7_days: 7, last_30_days: 30, last_90_days: 90,
     last_6_months: 182, last_12_months: 365, last_5_years: 1825
@@ -195,8 +195,8 @@
     var range  = form.querySelector('#hd-stats-range');
     var custom = document.getElementById('hd-stats-custom-dates');
 
-    // Datumsfelder nur im Modus "Benutzerdefiniert" zeigen; sonst deaktivieren,
-    // damit keine veralteten Datumswerte mitgesendet werden.
+    // Date fields only in "custom" mode; disabled otherwise so no stale dates
+    // are submitted.
     function toggleCustom() {
       var isCustom = !!(range && range.value === 'custom');
       if (!custom) { return; }
@@ -208,8 +208,8 @@
     if (range) { range.addEventListener('change', toggleCustom); }
     toggleCustom();
 
-    // Beim Gruppierungswechsel breite Presets auf ein passendes Fenster
-    // verengen; engere Auswahl und "Benutzerdefiniert" bleiben unangetastet.
+    // When the grouping changes, narrow wide presets to a fitting window;
+    // narrower choices and "custom" stay untouched.
     if (period && range) {
       period.addEventListener('change', function () {
         if (range.value === 'custom') { return; }

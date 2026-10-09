@@ -189,7 +189,7 @@ class HelpdeskNoteContentController < ApplicationController
   # HelpdeskAiSummaryJob gives it.
   def log_draft_failure(error)
     body = error.respond_to?(:body) ? error.body.to_s[0, 500] : nil
-    Rails.logger.warn("[helpdesk][ai] Antwortentwurf fehlgeschlagen (Issue ##{@issue.id}): " \
+    Rails.logger.warn("[helpdesk][ai] Answer draft failed (Issue ##{@issue.id}): " \
                       "#{error.class}: #{error.message}#{body.present? ? " | #{body}" : ''}")
   end
 

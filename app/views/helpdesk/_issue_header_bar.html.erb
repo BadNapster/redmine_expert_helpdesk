@@ -1,6 +1,6 @@
-<%# Helpdesk-Info-Leiste innerhalb der Ticketfelder (view_issues_show_details_bottom).
-    Eingehende Tickets: Absender, EML-Download-Link, Empfangszeitstempel.
-    Ausgehende Tickets (initiale Mail): Empfaenger (An/CC/BCC) und Sendezeitpunkt.
+<%# Helpdesk info bar within the ticket fields (view_issues_show_details_bottom).
+    Incoming tickets: sender, EML download link, reception timestamp.
+    Outgoing tickets (initial mail): recipient (To/CC/BCC) and send timestamp.
     Locals: issue, inbound (HelpdeskMessage|nil), outbound (HelpdeskMessage|nil), contact %>
 <% outbound = nil unless defined?(outbound) %>
 <% info_request_active = false unless defined?(info_request_active) %>
@@ -48,7 +48,7 @@
   </span>
 
   <% if outbound %>
-    <%# Initiale ausgehende Mail: alle Empfaenger anzeigen %>
+    <%# Initial outgoing mail: show all recipients %>
     <span class="hih-sent">
       <%= l(:label_helpdesk_sent_to) %>:
       <% to_addrs = outbound.recipient_to.to_s.split(/[,;]+/).map(&:strip).reject(&:blank?) %>
@@ -66,7 +66,7 @@
       <% if sent_files.any? %>
         <span class="icon icon-attachment"><%= hd_icon_label('attachment') %></span>
         <span class="hih-addr-tag" title="<%= h(sent_files.join(', ')) %>"><%=
-          sent_files.size == 1 ? h(sent_files.first) : "#{sent_files.size} Anhänge" %></span>
+          sent_files.size == 1 ? h(sent_files.first) : l(:label_helpdesk_sent_attachments_count, :count => sent_files.size) %></span>
       <% end %>
     </span>
   <% end %>

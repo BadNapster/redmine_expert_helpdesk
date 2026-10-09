@@ -1,6 +1,6 @@
-# Autoritative Ticket-Zuordnung: Kunde und Ursprungspostfach je Ticket.
-# Ersetzt die Konvention "Kontakt der ersten HelpdeskMessage = Kunde des Tickets".
-# Backfill: bestehende Tickets erhalten Kunde/Postfach aus ihrer ersten Nachricht.
+# Authoritative ticket assignment: customer and origin mailbox per ticket.
+# Replaces the convention "contact of the first HelpdeskMessage = customer of the ticket".
+# Backfill: existing tickets get customer/mailbox from their first message.
 class CreateHelpdeskTicketInfos < ActiveRecord::Migration[6.1]
   def up
     unless table_exists?(:helpdesk_ticket_infos)
@@ -14,7 +14,7 @@ class CreateHelpdeskTicketInfos < ActiveRecord::Migration[6.1]
       add_index :helpdesk_ticket_infos, :helpdesk_contact_id
     end
 
-    # Backfill aus der jeweils ersten Nachricht jedes Tickets
+    # Backfill from the first message of each ticket
     execute <<~SQL
       INSERT INTO helpdesk_ticket_infos (issue_id, helpdesk_contact_id, helpdesk_mailbox_id, created_at, updated_at)
       SELECT hm.issue_id, hm.helpdesk_contact_id, hm.helpdesk_mailbox_id, NOW(), NOW()

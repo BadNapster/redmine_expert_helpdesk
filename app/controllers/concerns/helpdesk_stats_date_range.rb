@@ -1,14 +1,14 @@
-# Gemeinsame Zeitraum-Logik der Statistik-Seiten (SLA- und KI-Statistik):
-# Presets + benutzerdefinierter Von/Bis-Bereich. Erwartet ein @period (Gruppierung
-# Tag/Woche/Monat/Jahr) fuer den 'custom'-Standard. Einbindung per `include`.
+# Shared date-range logic of the statistics pages (SLA and AI statistics):
+# presets plus a custom From/To range. Expects an @period (grouping
+# day/week/month/year) for the 'custom' default. Included via `include`.
 module HelpdeskStatsDateRange
-  # Auswaehlbare Zeitraeume; 'custom' zeigt die Datumsfelder.
+  # Selectable ranges; 'custom' shows the date fields.
   RANGES = %w[last_7_days last_30_days last_90_days last_6_months last_12_months last_5_years custom].freeze
 
   private
 
-  # Gewaehlter Zeitraum. Ohne Angabe: Standard (Jahresansicht), aber explizite
-  # Datumsparameter (z. B. Link/Bookmark) gelten als 'custom'.
+  # The selected range. If not given: default (year view), but explicit
+  # date parameters (e.g. link/bookmark) count as 'custom'.
   def resolve_range
     r = params[:range].presence
     return r if RANGES.include?(r)
@@ -16,7 +16,7 @@ module HelpdeskStatsDateRange
     params[:date_from].present? ? 'custom' : 'last_12_months'
   end
 
-  # Liefert [date_to, date_from] fuer den gewaehlten Zeitraum.
+  # Returns [date_to, date_from] for the selected range.
   def range_dates(range)
     to = Date.current
     case range
@@ -38,7 +38,7 @@ module HelpdeskStatsDateRange
     nil
   end
 
-  # Sinnvoller Standard-Zeitraum je Gruppierung (nur fuer 'custom' ohne Von-Datum).
+  # A sensible default range per grouping (only for 'custom' without a From date).
   def default_from(period, to)
     case period
     when 'day'  then to - 30

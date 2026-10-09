@@ -1,5 +1,5 @@
-# Kundenliste und -bearbeitung pro Projekt.
-# Erreichbar ueber den Reiter "Kunden" in der Projektnavigation.
+# Customer list and editing per project.
+# Reachable via the "Customers" tab in the project navigation.
 class HelpdeskContactsController < ApplicationController
   before_action :find_project_by_project_id
   before_action :authorize
@@ -36,7 +36,7 @@ class HelpdeskContactsController < ApplicationController
 
     scope = HelpdeskContact.where(:project_id => @project.id)
 
-    # Freitextsuche ueber Name, E-Mail und Firma
+    # Free-text search over name, e-mail and company
     @search = params[:search].to_s.strip
     if @search.present?
       safe = "%#{ActiveRecord::Base.sanitize_sql_like(@search.downcase)}%"
@@ -61,8 +61,8 @@ class HelpdeskContactsController < ApplicationController
     @contact_issues_total = @contact.issues.count
   end
 
-  # Gibt passende Kontakte als JSON zurueck (fuer Autocomplete in der Antwort-Maske).
-  # Parameter: q (Suchbegriff, mind. 2 Zeichen)
+  # Returns matching contacts as JSON (for autocomplete in the reply form).
+  # Parameter: q (search term, at least 2 characters)
   def autocomplete
     q = params[:q].to_s.strip
     if q.length >= 2
@@ -79,7 +79,7 @@ class HelpdeskContactsController < ApplicationController
     render :json => contacts.map { |c|
       name  = c.name.to_s
       email = c.email.to_s
-      # RFC 2822: Display-Namen mit Komma muessen gequotet werden
+      # RFC 2822: display names containing a comma must be quoted
       if name.present?
         display = name.include?(',') ? "\"#{name.gsub('"', '\\"')}\"" : name
         label   = "#{display} <#{email}>"

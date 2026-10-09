@@ -1,12 +1,12 @@
-# Aggregiert Kennzahlen fuer die KI-Statistik-Seite eines Projekts.
+# Aggregates metrics for the AI statistics page of a project.
 #
-# Basis: das Nutzungs-Protokoll (HelpdeskAiRequest) – jeder KI-Aufruf
-# (Zusammenfassung, KB-Extraktion, Embedding, RAG-Retrieval) mit Provider/Modell,
-# Token, Dauer und Erfolg/Fehler. Gruppierung nach Tag/Woche/Monat/Jahr; Zeit-
-# Buckets/"Stosszeiten" in lokaler Serverzeit (konsistent mit SlaStatistics).
+# Basis: the usage log (HelpdeskAiRequest) - every AI call (summary, KB
+# extraction, embedding, RAG retrieval) with provider/model, tokens, duration and
+# success/failure. Grouping by day/week/month/year; time buckets/"peak times" in
+# local server time (consistent with SlaStatistics).
 #
-# Liefert reine Ruby-Datenstrukturen (to_h) ohne Rendering-Logik, damit die
-# Aggregation isoliert testbar bleibt. Bucketing/Mittelwerte kommen aus
+# Returns plain Ruby data structures (to_h) without any rendering logic, so the
+# aggregation stays testable in isolation. Bucketing/averages come from
 # StatisticsSupport.
 module RedmineExpertHelpdesk
   class AiUsageStatistics
@@ -24,8 +24,8 @@ module RedmineExpertHelpdesk
       @date_from = date_from || (@date_to - 30)
       @date_from, @date_to = @date_to, @date_from if @date_from > @date_to
 
-      @from_t = @date_from.to_time         # lokale Mitternacht (Start inkl.)
-      @to_t   = (@date_to + 1).to_time     # lokale Mitternacht Folgetag (Ende exkl.)
+      @from_t = @date_from.to_time         # local midnight (start inclusive)
+      @to_t   = (@date_to + 1).to_time     # local midnight of the next day (end exclusive)
     end
 
     def to_h
@@ -79,7 +79,7 @@ module RedmineExpertHelpdesk
       }
     end
 
-    # Aufschluesselung je Anfragetyp (feste Reihenfolge, nur vorhandene Typen).
+    # Breakdown by request type (fixed order, only types that exist).
     def by_type(rows)
       grouped = rows.group_by(&:request_type)
       HelpdeskAiRequest::REQUEST_TYPES.filter_map do |type|
@@ -91,7 +91,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Aufschluesselung je Provider/Modell, absteigend nach Anzahl.
+    # Breakdown by provider/model, descending by count.
     def by_model(rows)
       rows.group_by { |r| [r.provider, r.model] }.map do |(provider, model), rs|
         { :provider => provider, :model => model,
@@ -101,7 +101,7 @@ module RedmineExpertHelpdesk
       end.sort_by { |h| -h[:requests] }
     end
 
-    # Anzahl/Token je Bucket inkl. leerer Buckets, damit die Balken luecklos sind.
+    # Count/tokens per bucket, including empty buckets, so the bars are gap-free.
     def volume_series(rows)
       requests = Hash.new(0)
       input    = Hash.new(0)
@@ -120,7 +120,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Fehler nach Fehlerklasse, absteigend.
+    # Errors by error class, descending.
     def errors(rows)
       rows.reject(&:success).group_by { |r| r.error_class.presence || '–' }
           .map { |cls, rs| { :error_class => cls, :count => rs.size } }
@@ -131,12 +131,12 @@ module RedmineExpertHelpdesk
       StatisticsSupport.hour_histogram(rows.map(&:created_at))
     end
 
-    # ISO-Wochentage 1=Mo .. 7=So.
+    # ISO weekdays 1=Mon .. 7=Sun.
     def busiest_weekdays(rows)
       StatisticsSupport.weekday_histogram(rows.map(&:created_at))
     end
 
-    # Zustaende der Wissensbasis-Eintraege des Projekts im Zeitraum.
+    # States of the project's knowledge-base entries in the period.
     def kb_counts(*)
       base = { 'pending' => 0, 'approved' => 0, 'skipped' => 0 }
       counts = HelpdeskKnowledgeEntry

@@ -1,13 +1,13 @@
-<%# Kontakt-Zuordnungs- und Initialmailformular.
+<%# Contact assignment and initial mail form.
     Locals:
-      issue       – Issue (neu oder vorhanden)
+      issue       – Issue (new or existing)
       project     – Project
       mailboxes   – Array<HelpdeskMailbox>
-      in_new_form – true = innerhalb des Ticket-Erstellungsformulars,
-                    false = eigenes Formular fuer bestehende Tickets %>
+      in_new_form – true = inside the ticket creation form,
+                    false = own form for existing tickets %>
 
 <style>
-/* CSS fuer das Helpdesk-Init-Formular, eigenstaendig ohne Abhaengigkeit von _reply_in_edit */
+/* CSS for the helpdesk init form, standalone without dependency on _reply_in_edit */
 #hd-init-section {
   clear: both;
   margin-top: 10px;
@@ -17,8 +17,8 @@
   border-radius: 3px;
   box-sizing: border-box;
 }
-/* Redmines .tabular label { float:left; width:180px; text-align:right; margin-left:-180px }
-   ueberschreiben – inkl. margin, sonst ragt der Text links aus dem sichtbaren Bereich */
+/* Override Redmine's .tabular label { float:left; width:180px; text-align:right; margin-left:-180px }
+   – incl. margin, otherwise the text protrudes from the visible area on the left */
 #hd-init-section label {
   float: none !important;
   width: auto !important;
@@ -69,7 +69,7 @@
 .hd-init-submit {
   margin-top: 6px;
 }
-/* Autocomplete-Dropdown */
+/* Autocomplete dropdown */
 .hd-init-ac-wrap { position: relative; flex: 1; max-width: 420px; }
 .hd-init-ac-wrap input { width: 100%; }
 .hd-init-ac-drop {
@@ -101,7 +101,7 @@
 
 <div id="hd-init-section">
   <% if in_new_form %>
-    <%#  Neue Tickets: Checkbox blendet die Felder ein (opt-in) %>
+    <%#  New tickets: checkbox reveals the fields (opt-in) %>
     <label>
       <input type="checkbox" id="hd-init-send-cb" name="helpdesk_init[send_mail]" value="1" />
       <strong><%= l(:label_helpdesk_send_initial_mail) %></strong>
@@ -157,7 +157,7 @@
     </div>
 
   <% else %>
-    <%# Bestehende Tickets: Felder sofort sichtbar, Kontakt zuordnen ohne Mail moeglich %>
+    <%# Existing tickets: fields visible immediately, assign contact without mail possible %>
     <p style="margin:0 0 8px 0; font-weight:bold; font-size:0.95em;">
       <%= l(:label_helpdesk_assign_kunde) %>
     </p>
@@ -246,7 +246,7 @@
 
     function close() { drop.style.display = 'none'; drop.innerHTML = ''; activeIdx = -1; }
 
-    // Mehrfachempfaenger: nur das letzte Komma-Token ersetzen
+    // Multiple recipients: only replace the last comma token
     function currentToken() {
       var parts = input.value.split(',');
       return parts[parts.length - 1].trim();
@@ -316,10 +316,10 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    // Checkbox: zeigt/versteckt Felder (neues Ticket) oder Nachrichtenfeld (bestehendes Ticket)
+    // Checkbox: shows/hides fields (new ticket) or message field (existing ticket)
     var cb      = document.getElementById('hd-init-send-cb');
-    var fields  = document.getElementById('hd-init-fields');    // nur neues Ticket
-    var bodyWrap = document.getElementById('hd-init-body-wrap'); // nur bestehendes Ticket
+    var fields  = document.getElementById('hd-init-fields');    // new ticket only
+    var bodyWrap = document.getElementById('hd-init-body-wrap'); // existing ticket only
     if (cb) {
       cb.addEventListener('change', function() {
         if (fields)   fields.style.display   = this.checked ? '' : 'none';

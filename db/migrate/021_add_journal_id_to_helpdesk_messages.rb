@@ -1,6 +1,6 @@
-# Direkte Verknuepfung eingehender Nachrichten mit dem zugehoerigen Journal.
-# Ersetzt das Timestamp-Matching im Frontend fuer eingehende Mails
-# (MailHandler liefert das Journal-Objekt direkt, die ID kann gespeichert werden).
+# Direct link of incoming messages to their journal.
+# Replaces the timestamp matching in the frontend for incoming mails
+# (MailHandler delivers the journal object directly, the ID can be stored).
 class AddJournalIdToHelpdeskMessages < ActiveRecord::Migration[6.1]
   def change
     unless column_exists?(:helpdesk_messages, :journal_id)

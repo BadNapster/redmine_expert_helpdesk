@@ -1,8 +1,8 @@
 /*
- * KI-Statistik: rendert die Diagramme mit Chart.js (lokal gebundelt).
- * Daten kommen aus einem JSON-Insel-Element (#hd-ai-stats-data), kein inline
- * ausfuehrbares Script noetig (CSP-freundlich). Struktur analog zu
- * helpdesk_sla_stats.js (readData/baseOptions/wireFilter).
+ * AI statistics: renders the charts with Chart.js (bundled locally).
+ * Data comes from a JSON island (#hd-ai-stats-data), no inline executable
+ * script is needed (CSP friendly). Structure mirrors helpdesk_sla_stats.js
+ * (readData/baseOptions/wireFilter).
  */
 (function () {
   'use strict';
@@ -29,7 +29,7 @@
 
   function plugins() { return HAS_DL ? [ChartDataLabels] : []; }
 
-  // Tooltip: "Label: Wert (P%)" relativ zur Datensatz-Summe.
+  // Tooltip: "Label: value (P%)" relative to the dataset sum.
   function tipDatasetPct(item) {
     var sum = item.chart.data.datasets[item.datasetIndex].data.reduce(function (a, b) { return a + (b || 0); }, 0);
     var p = sum ? Math.round(item.raw / sum * 100) : 0;
@@ -51,14 +51,14 @@
     };
   }
 
-  // Datalabels: absolute Anzahl ueber dem Balken (nur wenn > 0).
+  // Datalabels: absolute count above the bar (only when > 0).
   function countLabels() {
     return { anchor: 'end', align: 'end', offset: 0, clamp: true, display: 'auto',
              color: '#555', font: { size: 10, weight: 'bold' },
              formatter: function (v) { return v > 0 ? v : ''; } };
   }
 
-  // Einreihiges Balkendiagramm (Anzahl je Kategorie).
+  // Single-series bar chart (count per category).
   function renderBars(id, labels, data, label) {
     var c = ctx(id);
     if (!c) { return; }
@@ -74,7 +74,7 @@
     });
   }
 
-  // Gruppiertes Balkendiagramm (zwei Reihen).
+  // Grouped bar chart (two series).
   function renderGrouped(id, labels, series) {
     var c = ctx(id);
     if (!c) { return; }
@@ -94,7 +94,7 @@
     });
   }
 
-  // Ring-Diagramm (Anteile), Datalabels als Prozent.
+  // Doughnut chart (shares), datalabels as percentages.
   function renderDoughnut(id, labels, data) {
     var c = ctx(id);
     if (!c || !labels.length) { return; }
@@ -145,8 +145,8 @@
     }
   }
 
-  // Zeitraum-Presets nach ungefaehrer Spanne (Tage) und sinnvoller Default je
-  // Gruppierung, damit z. B. "Tag" nicht ein ganzes Jahr an Tagesbalken zeigt.
+  // Range presets by approximate span (days) and a sensible default per
+  // grouping, so "day" does not show a whole year of daily bars.
   var RANGE_SPAN = {
     last_7_days: 7, last_30_days: 30, last_90_days: 90,
     last_6_months: 182, last_12_months: 365, last_5_years: 1825

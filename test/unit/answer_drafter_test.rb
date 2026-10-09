@@ -142,7 +142,7 @@ class AnswerDrafterTest < ActiveSupport::TestCase
     issue = Issue.find(1)
     issue.update_columns(:subject => 'Kasse 3 bootet nicht', :description => 'x' * 500)
     text = drafter('ai_max_input_chars' => '80').send(:ticket_text, issue.reload)
-    assert text.start_with?('Betreff: Kasse 3 bootet nicht'), text
+    assert text.start_with?('Тема: Kasse 3 bootet nicht'), text
     assert_equal 80, text.length
   end
 

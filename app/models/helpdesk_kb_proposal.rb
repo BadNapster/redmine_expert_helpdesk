@@ -1,6 +1,6 @@
-# Ein Loesungsvorschlag fuer ein Ticket, ermittelt aus einem aehnlichen geloesten
-# Ticket (RAG). Wird bei der Zusammenfassung erzeugt und in der Seitenleiste
-# angezeigt. source_issue = das aehnliche, bereits geloeste Ticket.
+# A solution proposal for a ticket, derived from a similar solved ticket (RAG).
+# Created during the summary and shown in the sidebar. source_issue = the
+# similar, already solved ticket.
 class HelpdeskKbProposal < HelpdeskApplicationRecord
   belongs_to :issue,        :optional => true
   belongs_to :source_issue, :class_name => 'Issue', :optional => true

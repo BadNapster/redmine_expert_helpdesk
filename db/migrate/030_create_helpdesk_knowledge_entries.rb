@@ -1,7 +1,7 @@
-# Wissensbasis-Eintrag je geloestem Ticket: das extrahierte {Problem, Loesung}
-# als System of Record (Dedup, Kuratierung, Re-Embed-Quelle). Die Vektoren
-# selbst liegen im externen Vektor-Store (Qdrant/pgvector); hier nur Metadaten
-# + Status (pending/approved/skipped) + Referenz auf den Vektor-Punkt.
+# Knowledge base entry per solved ticket: the extracted {problem, solution}
+# as the system of record (dedup, curation, re-embed source). The vectors
+# themselves live in the external vector store (Qdrant/pgvector); here only metadata
+# + status (pending/approved/skipped) + reference to the vector point.
 class CreateHelpdeskKnowledgeEntries < ActiveRecord::Migration[6.1]
   def change
     return if table_exists?(:helpdesk_knowledge_entries)

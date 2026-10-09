@@ -40,7 +40,7 @@
         field.value = field.value.substring(0, start) + macro + field.value.substring(end);
         field.selectionStart = field.selectionEnd = start + macro.length;
         field.focus();
-        // Input-Event ausloesen, damit Live-Vorschauen (z. B. Fusszeile) aktualisieren
+        // Trigger input event so live previews (e.g. footer) update
         field.dispatchEvent(new Event('input', { bubbles: true }));
       });
     </script>

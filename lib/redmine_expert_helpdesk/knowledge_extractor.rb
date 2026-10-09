@@ -1,6 +1,6 @@
-# Extrahiert aus einem abgeschlossenen Ticket ein {Problem, Loesung}-Paar fuer die
-# Wissensbasis. Nutzt den bestehenden AiClient (Chat) mit einem JSON-liefernden
-# Prompt. Liefert nichts Verwertbares, wenn keine echte Loesung erkennbar ist.
+# Extracts a {problem, solution} pair for the knowledge base from a closed ticket.
+# Uses the existing AiClient (chat) with a JSON-delivering prompt. Returns nothing
+# usable when no real solution is recognisable.
 require 'strscan'
 
 module RedmineExpertHelpdesk
@@ -15,63 +15,64 @@ module RedmineExpertHelpdesk
     DEFAULT_DETAIL = 'general'.freeze
 
     PROMPT_HEAD = <<~PROMPT.freeze
-      Du erhaeltst den vollstaendigen Verlauf eines ABGESCHLOSSENEN Support-Tickets
-      (Kundenanfrage und Bearbeiter-Antworten). Der Verlauf beginnt mit der Betreffzeile
-      ("Betreff: ..."); sie ist Teil der Kundenanfrage. Extrahiere daraus einen wiederverwendbaren
-      Wissensbasis-Eintrag und antworte AUSSCHLIESSLICH mit einem JSON-Objekt mit genau
-      diesen Feldern:
+      Ты получаешь полную переписку ЗАКРЫТОЙ заявки поддержки
+      (обращение клиента и ответы сотрудников). Переписка начинается со строки темы
+      («Тема: ...»); она является частью обращения клиента. Извлеки из нее пригодную
+      для повторного использования запись базы знаний и ответь ИСКЛЮЧИТЕЛЬНО
+      JSON-объектом с ровно такими полями:
     PROMPT
 
     PROMPT_FIELDS = {
       'general' => <<~PROMPT,
-        - "problem":  das urspruengliche Anliegen/Problem des Kunden, praegnant und
-                      verallgemeinert (deutsch).
-        - "solution": die tatsaechliche Loesung bzw. das Vorgehen, das zur Loesung fuehrte,
-                      praegnant, verallgemeinert und ohne kundenspezifische Geheimnisse
-                      (deutsch, gerne als kurze Schritte).
+        - "problem":  первоначальное обращение/проблема клиента, кратко и
+                      обобщенно (на русском языке).
+        - "solution": фактическое решение или порядок действий, приведший к решению,
+                      кратко, обобщенно и без чужих конфиденциальных сведений
+                      (на русском языке, можно в виде коротких шагов).
       PROMPT
       'specific' => <<~PROMPT,
-        - "problem":  das urspruengliche Anliegen/Problem des Kunden, praegnant (deutsch).
-                      Behalte die konkreten Merkmale bei: Name der Anwendung bzw. des
-                      Produkts/Geraets, Version, Fehlercode und Fehlermeldung (wortgetreu),
-                      betroffene Komponente oder Funktion.
-        - "solution": die tatsaechliche Loesung bzw. das Vorgehen, das zur Loesung fuehrte
-                      (deutsch, gerne als kurze Schritte). Nenne die beteiligten Anwendungen,
-                      Versionen, Einstellungen und Menuepfade beim Namen.
+        - "problem":  первоначальное обращение/проблема клиента, кратко (на русском
+                      языке). Сохрани конкретные признаки: название приложения или
+                      продукта/устройства, версию, код ошибки и текст ошибки
+                      (дословно), затронутый компонент или функцию.
+        - "solution": фактическое решение или порядок действий, приведший к решению
+                      (на русском языке, можно в виде коротких шагов). Называй
+                      затронутые приложения, версии, настройки и пути меню по именам.
       PROMPT
       'most_specific' => <<~PROMPT
-        - "problem":  das urspruengliche Anliegen/Problem des Kunden (deutsch). Verallgemeinere
-                      NICHT: Behalte Name der Anwendung bzw. des Produkts/Geraets, Version,
-                      Fehlercode und Fehlermeldung (wortgetreu), Datei- und Registry-Pfade,
-                      Server-, Host- und Freigabenamen sowie betroffene Komponenten bei.
-        - "solution": die tatsaechliche Loesung bzw. das Vorgehen, das zur Loesung fuehrte,
-                      als Schritte in der tatsaechlichen Reihenfolge (deutsch). Nenne Pfade,
-                      Systeme, Konfigurationswerte, Befehle und Menuepfade exakt so, wie sie im
-                      Verlauf stehen - gerade diese Details entscheiden, ob die Loesung auf
-                      einen neuen Fall passt.
+        - "problem":  первоначальное обращение/проблема клиента (на русском языке).
+                      НЕ обобщай: сохрани название приложения или продукта/устройства,
+                      версию, код ошибки и текст ошибки (дословно), пути файлов и
+                      реестра, имена серверов, хостов и общих ресурсов, а также
+                      затронутые компоненты.
+        - "solution": фактическое решение или порядок действий, приведший к решению,
+                      в виде шагов в фактическом порядке (на русском языке). Называй пути,
+                      системы, значения конфигурации, команды и пути меню точно так, как они
+                      стоят в переписке — именно эти детали определяют, подходит ли
+                      решение к новому случаю.
       PROMPT
     }.freeze
 
     PROMPT_TAIL = <<~PROMPT.freeze
-        - "has_solution": true nur, wenn im Verlauf eine echte, nachvollziehbare Loesung
-                      erkennbar ist; sonst false.
+        - "has_solution": true только если в переписке видно настоящее, воспроизводимое
+                      решение; иначе false.
 
-      Erfinde nichts. Wenn keine Loesung erkennbar ist, setze has_solution=false und
-      solution auf einen leeren String. Gib nur das JSON aus, ohne Codeblock-Markierung.
+      Ничего не выдумывай. Если решения не видно, задай has_solution=false, а
+      solution — пустой строкой. Выведи только JSON, без разметки кода.
     PROMPT
 
     # Sent at every level: the finer levels are about technical detail, not about
     # who the customer is or how to log in as them. An instruction to the model,
     # not a filter - the entry is still reviewable in the knowledge base tab.
     PROMPT_PRIVACY = <<~PROMPT.freeze
-      Uebernimm niemals Passwoerter, Zugangsdaten, Tokens oder Lizenzschluessel, und keine
-      personenbezogenen Daten (Namen, E-Mail-Adressen, Telefonnummern) des Kunden.
+      Никогда не переноси пароли, учетные данные, токены или лицензионные ключи, а также
+      персональные данные клиента (имена, адреса электронной почты, номера телефонов).
     PROMPT
 
     # Paths are what the finer levels keep, and a Windows path is backslashes.
     PROMPT_ESCAPING = <<~PROMPT.freeze
-      Achte auf gueltiges JSON: Jeder Backslash in einem Wert wird verdoppelt, z. B. wird der
-      Pfad \\\\server\\freigabe als "\\\\\\\\server\\\\freigabe" geschrieben.
+      Следи за корректным JSON: каждый обратный слэш в значении удваивается, например, путь
+      \\\\server\\share записывается как "\\\\\\\\server\\\\share".
     PROMPT
 
     def self.prompt_for(level)
@@ -181,7 +182,7 @@ module RedmineExpertHelpdesk
       # The subject often carries the device and the error that the body only
       # refers to; without it the entry embeds "printer broken" as the problem.
       subject = issue.subject.to_s.strip
-      parts << "Betreff: #{subject}" if subject.present?
+      parts << "Тема: #{subject}" if subject.present?
       parts << issue.description.to_s if issue.description.present?
       issue.journals.order(:created_on).each do |j|
         next if j.notes.blank? || skip.include?(j.id)
@@ -205,7 +206,7 @@ module RedmineExpertHelpdesk
     end
     private_class_method :ai_drafted_journal_ids
 
-    # Liefert ein Result oder nil (nicht konfiguriert / kein Inhalt).
+    # Returns a Result or nil (not configured / no content).
     def extract(issue)
       text = ticket_text(issue)
       return nil if text.blank?
@@ -241,14 +242,14 @@ module RedmineExpertHelpdesk
       [ps.effective_kb_extract_prompt(@settings), ps.effective_kb_extract_detail(@settings)]
     end
 
-    # Beschreibung + alle Journal-Notizen (der Loesungsweg steht oft in internen
-    # Notizen; die Wissensbasis ist projektintern).
+    # Description + all journal notes (the solution path often lives in internal
+    # notes; the knowledge base is project-internal).
     def ticket_text(issue)
       self.class.ticket_text(issue, :max_chars => MAX_CHARS, :include_private => true)
     end
 
-    # Tolerantes JSON-Parsing: evtl. Codeblock-Markierung entfernen, nur das
-    # erste JSON-Objekt betrachten.
+    # Tolerant JSON parsing: strip any code-block markers, look at only the first
+    # JSON object.
     def parse_json(raw, source = nil)
       s = raw.to_s.strip
       s = s.sub(/\A```(?:json)?\s*/i, '').sub(/```\s*\z/, '')

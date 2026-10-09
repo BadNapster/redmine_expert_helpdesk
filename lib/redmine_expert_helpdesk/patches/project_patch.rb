@@ -1,4 +1,4 @@
-# Verknuepft Projekte mit ihren Helpdesk-Postfaechern und Antwortvorlagen
+# Links projects with their helpdesk mailboxes and reply templates
 module RedmineExpertHelpdesk
   module Patches
     module ProjectPatch

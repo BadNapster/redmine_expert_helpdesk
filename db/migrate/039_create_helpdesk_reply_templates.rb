@@ -1,4 +1,4 @@
-# Answer templates ("Textbausteine") an agent can insert into the note field
+# Answer templates ("building blocks") an agent can insert into the note field
 # while replying to a customer. project_id NULL marks a global template that is
 # offered in every helpdesk project; a row with a project_id belongs to that
 # project alone. One table for both scopes keeps the picker a single query.

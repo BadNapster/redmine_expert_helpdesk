@@ -1,11 +1,11 @@
-# Erzeugt asynchron eine KI-Zusammenfassung einer eingehenden Helpdesk-Mail und
-# haengt sie als private (interne) Journal-Notiz an das Ticket. Wird aus dem
-# MailProcessor nach der Ingestion via perform_later angestossen, damit KI-Latenz
-# und -Fehler den Mailabruf nicht blockieren.
+# Asynchronously creates an AI summary of an incoming helpdesk mail and
+# attaches it as a private (internal) journal note to the ticket. Started from
+# MailProcessor after ingestion via perform_later, so that AI latency and
+# errors do not block the mail fetch.
 #
-# Selbst-enthaltend: laedt alle noetigen Objekte anhand der IDs neu und prueft
-# Aktivierung/Umfang, bevor ein externer Call erfolgt. Fehler werden geloggt und
-# nicht weitergeworfen (die Mailverarbeitung ist bereits abgeschlossen).
+# Self-contained: reloads all needed objects by id and checks activation/scope
+# before an external call is made. Errors are logged and never re-raised (mail
+# processing is already finished).
 require 'base64'
 
 class HelpdeskAiSummaryJob < ActiveJob::Base
@@ -22,9 +22,9 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
                           application/json message/rfc822].freeze
   TEXT_EXTENSIONS    = %w[txt csv log md json xml eml].freeze
 
-  # force: true = manuelles Neu-Erzeugen aus dem Ticket. Ueberspringt die
-  # projektspezifische Aktivierung und den Umfang (der Bearbeiter fordert es aktiv
-  # an); globale Aktivierung + Konfiguration werden weiterhin geprueft.
+  # force: true = manual re-creation from the ticket. Skips the project-specific
+  # activation and scope (the agent asks for it explicitly); global activation
+  # and configuration are still checked.
   def perform(issue_id, journal_id: nil, message_id: nil, force: false)
     settings = Setting.plugin_redmine_expert_helpdesk
     return unless RedmineExpertHelpdesk::AiFeatures.ai_enabled?
@@ -111,21 +111,21 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     journal = create_note(issue, summary)
     record_summary(issue, journal, client)
   rescue RedmineExpertHelpdesk::AiClient::AiError => e
-    # Antwort-Body des Providers mitloggen – dort steht der eigentliche Grund
-    # (z. B. falsches Modell, nicht unterstuetzter Parameter, Kontextlaenge).
+    # Log the provider's response body – it holds the actual reason
+    # (e.g. wrong model, unsupported parameter, context length).
     detail = e.body.to_s.gsub(/\s+/, ' ').strip
     detail = "#{detail[0, 500]}…" if detail.length > 500
-    msg = "[helpdesk][ai] Zusammenfassung fehlgeschlagen (Issue ##{issue_id}): #{e.message}"
+    msg = "[helpdesk][ai] Summary failed (Issue ##{issue_id}): #{e.message}"
     msg += " – #{detail}" if detail.present?
     Rails.logger.warn(msg)
   rescue => e
-    Rails.logger.warn("[helpdesk][ai] Unerwarteter Fehler (Issue ##{issue_id}): #{e.class}: #{e.message}")
+    Rails.logger.warn("[helpdesk][ai] Unexpected error (Issue ##{issue_id}): #{e.class}: #{e.message}")
   end
 
   private
 
-  # Volltext der Mail: bevorzugt der komplette Klartext aus der .eml (ganzer
-  # Verlauf), Fallback auf die Journal-Notiz bzw. Ticket-Beschreibung.
+  # Full text of the mail: prefers the complete plain text from the .eml (the
+  # whole thread), falling back to the journal note or the ticket description.
   # Subject of the mail, same preference order as source_text: the archived .eml
   # first, else the issue subject MailHandler has already cleaned up. The subject
   # is often the only place the customer names the affected device, and the
@@ -134,7 +134,7 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     subject = eml_mail(message)&.subject.to_s.strip
     subject.present? ? subject : issue.subject.to_s.strip
   rescue StandardError => e
-    Rails.logger.warn("[helpdesk][ai] .eml-Betreff konnte nicht gelesen werden: #{e.message}")
+    Rails.logger.warn("[helpdesk][ai] .eml subject could not be read: #{e.message}")
     issue.subject.to_s.strip
   end
 
@@ -147,18 +147,18 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
       eml = message&.eml_attachment
       Mail.read(eml.diskfile) if eml && eml.diskfile && File.exist?(eml.diskfile)
     rescue StandardError => e
-      Rails.logger.warn("[helpdesk][ai] .eml konnte nicht gelesen werden: #{e.message}")
+      Rails.logger.warn("[helpdesk][ai] .eml could not be read: #{e.message}")
       nil
     end
   end
 
-  # "Betreff: ..." line above the body - the same marker the completeness check
+  # "Тема: ..." line above the body - the same marker the completeness check
   # uses, so both prompts can explain it the same way. Blank subject: body only.
   def with_subject(subject, text)
     head = subject.to_s.strip
     return text.to_s if head.blank?
 
-    "Betreff: #{head}\n\n#{text}"
+    "Тема: #{head}\n\n#{text}"
   end
 
   def source_text(issue, journal, message)
@@ -170,9 +170,9 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     (journal ? journal.notes : issue.description).to_s
   end
 
-  # Kompletter Ticketverlauf: Beschreibung + Journal-Notizen. Private Notizen nur,
-  # wenn projektseitig erlaubt. Eigene KI-Zusammenfassungen werden ausgeschlossen,
-  # damit die Zusammenfassung nicht rekursiv frueheren KI-Text einspeist.
+  # Complete ticket history: description + journal notes. Private notes only if
+  # the project allows them. Own AI summaries are excluded, so the summary does
+  # not recursively feed on earlier AI text.
   def journal_text(issue, ps)
     own = HelpdeskAiSummary.where(:issue_id => issue.id).pluck(:journal_id).compact.to_set
     parts = []
@@ -203,11 +203,11 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
       mail.body.decoded.to_s
     end
   rescue => e
-    Rails.logger.warn("[helpdesk][ai] .eml konnte nicht gelesen werden: #{e.message}")
+    Rails.logger.warn("[helpdesk][ai] .eml could not be read: #{e.message}")
     nil
   end
 
-  # Anhaenge dieser Mail (ohne die von uns angehaengte Original-.eml).
+  # Attachments of this mail (without the original .eml we attached).
   def mail_attachments(issue, journal, exclude_id)
     list =
       if journal
@@ -233,8 +233,9 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     base_text.to_s.gsub(/\s+/, ' ').strip.length
   end
 
-  # Baut den User-Text (Mailinhalt + optionale Anhang-Infos) und die Bildliste
-  # entsprechend der projektspezifischen Anhang-Auswahl. Truncated auf das Limit.
+  # Builds the user text (mail content + optional attachment info) and the image
+  # list according to the project-specific attachment selection. Truncated to
+  # the limit.
   def build_input(base_text, attachments, ps, settings, issue = nil, message = nil, subject: nil)
     max_chars = settings['ai_max_input_chars'].to_i
     max_chars = 12_000 unless max_chars.positive?
@@ -246,13 +247,13 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
 
     if attachments.any? && ps.ai_attach_metadata?
       meta = attachments.map { |a| " - #{a.filename} (#{a.content_type}, #{number_to_human_size(a.filesize)})" }
-      parts << "\n[Anhaenge:\n#{meta.join("\n")}\n]"
+      parts << "\n[Вложения:\n#{meta.join("\n")}\n]"
     end
 
     if attachments.any? && ps.ai_attach_text?
       attachments.each do |a|
         txt = extract_text(a, issue)
-        parts << "\n[Anhang #{a.filename} – extrahierter Text:]\n#{txt}" if txt.present?
+        parts << "\n[Вложение #{a.filename} – извлеченный текст:]\n#{txt}" if txt.present?
       end
     end
 
@@ -341,9 +342,9 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     )
   end
 
-  # Textextraktion aus Anhaengen: Text-basierte Typen direkt, PDF via pdf-reader
-  # (optional; ohne das Gem wird PDF-Text uebersprungen). Bilder werden hier nicht
-  # gelesen (dafuer ist die Vision-Option zustaendig).
+  # Text extraction from attachments: text-based types directly, PDF via
+  # pdf-reader (optional; without the gem PDF text is skipped). Images are not
+  # read here (that is the vision option's job).
   def extract_text(att, issue = nil)
     return nil unless att.diskfile && File.exist?(att.diskfile)
 
@@ -365,7 +366,7 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
       extract_pdf(att.diskfile)
     end
   rescue => e
-    Rails.logger.warn("[helpdesk][ai] Textextraktion fehlgeschlagen (#{att.filename}): #{e.message}")
+    Rails.logger.warn("[helpdesk][ai] Text extraction failed (#{att.filename}): #{e.message}")
     nil
   end
 
@@ -396,16 +397,16 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     reader = PDF::Reader.new(path)
     reader.pages.first(PDF_PAGE_LIMIT).map(&:text).join("\n")
   rescue LoadError
-    nil # pdf-reader nicht verfuegbar -> PDF-Text ueberspringen
+    nil # pdf-reader not available -> skip PDF text
   end
 
   def contact_for(issue)
     HelpdeskTicketInfo.find_by(:issue_id => issue.id)&.helpdesk_contact
   end
 
-  # RAG: aehnliche geloeste Tickets aus der Wissensbasis DES PROJEKTS holen
-  # (strikte Isolation ueber den Store). Liefert nur, wenn genug Treffer ueber
-  # dem Score-Schwellwert liegen. Fehler blockieren die Zusammenfassung nicht.
+  # RAG: fetch similar solved tickets from the PROJECT's own knowledge base
+  # (strict isolation via the store). Only delivered when enough hits are above
+  # the score threshold. Errors do not block the summary.
   def retrieve_proposals(issue, ps, settings, client, query_text, diagnostics = nil)
     return [] unless ps.kb_show_in_summary? || ps.kb_show_in_sidebar?
 
@@ -450,14 +451,14 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     # with_issue_ids: the summary is internal and names the ticket so the agent
     # can follow it up - unlike the customer-facing answer draft.
     lines = RedmineExpertHelpdesk::KnowledgeRetrieval.format_hits(proposals, :with_issue_ids => true)
-    "\n\n---\nAehnliche frueher geloeste Faelle aus der Wissensbasis:\n#{lines}\n\n" \
-      'Wenn einer dieser Faelle zum aktuellen Anliegen passt, ergaenze am Ende der Zusammenfassung ' \
-      'einen Abschnitt "Loesungsvorschlag" mit dem passenden Vorgehen und nenne die Ticketnummer(n) ' \
-      'im Format #1234 - nur die der wirklich passenden Faelle. ' \
-      'Vergleiche dazu konkrete Merkmale wie Anwendung, Version, Fehlercode, Pfade und Systeme mit ' \
-      'dem aktuellen Anliegen: Passen mehrere Faelle, bevorzuge den, dessen Merkmale uebereinstimmen, ' \
-      'und nenne wesentliche Unterschiede. ' \
-      'Passt nichts, lasse den Abschnitt weg.'
+    "\n\n---\nПохожие ранее решенные случаи из базы знаний:\n#{lines}\n\n" \
+      'Если какой-либо из этих случаев подходит к текущему обращению, добавь в конец сводки ' \
+      'раздел «Предложение решения» с подходящим порядком действий и укажи номер(а) заявки ' \
+      'в формате #1234 — только для действительно подходящих случаев. ' \
+      'Сопоставь для этого конкретные признаки, такие как приложение, версия, код ошибки, пути и ' \
+      'системы, с текущим обращением: если подходит несколько случаев, предпочти тот, чьи признаки ' \
+      'совпадают, и укажи существенные отличия. ' \
+      'Если ни один не подходит, опусти этот раздел.'
   end
 
   def create_note(issue, summary, label = I18n.t(:label_helpdesk_ai_summary))
@@ -473,7 +474,7 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
     journal
   end
 
-  # Protokolliert Provider/Modell + Token-Verbrauch fuer die Header-Anzeige.
+  # Logs provider/model + token usage for the header display.
   def record_summary(issue, journal, client)
     usage = client.last_usage || {}
     HelpdeskAiSummary.create!(
@@ -485,7 +486,7 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
       :output_tokens => usage[:output]
     )
   rescue => e
-    Rails.logger.warn("[helpdesk][ai] Token-Protokoll konnte nicht gespeichert werden: #{e.message}")
+    Rails.logger.warn("[helpdesk][ai] Token log could not be saved: #{e.message}")
   end
 
   # Skipped run: same record, explicit zero usage. Keeps the note marked as an
@@ -500,6 +501,6 @@ class HelpdeskAiSummaryJob < ActiveJob::Base
       :output_tokens => 0
     )
   rescue => e
-    Rails.logger.warn("[helpdesk][ai] Token-Protokoll konnte nicht gespeichert werden: #{e.message}")
+    Rails.logger.warn("[helpdesk][ai] Token log could not be saved: #{e.message}")
   end
 end

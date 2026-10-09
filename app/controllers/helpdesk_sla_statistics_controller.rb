@@ -1,5 +1,5 @@
-# SLA-Statistik eines Projekts (Reiter "SLA-Statistik").
-# Nur erreichbar, wenn SLA fuer das Projekt aktiv ist.
+# SLA statistics of a project ("SLA statistics" tab).
+# Only reachable when SLA is active for the project.
 class HelpdeskSlaStatisticsController < ApplicationController
   include HelpdeskStatsDateRange
 

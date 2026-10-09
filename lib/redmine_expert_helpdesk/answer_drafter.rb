@@ -1,4 +1,4 @@
-# Customer-facing answer draft for a ticket ("KI-Antwortvorschlag").
+# Customer-facing answer draft for a ticket ("AI answer draft").
 #
 # Every other AI feature in this plugin writes for the agent: the summary
 # condenses the customer's mail, the completeness check judges it, the knowledge
@@ -40,17 +40,17 @@ module RedmineExpertHelpdesk
 
     # The model emits this when the supplied cases do not actually fit. The score
     # threshold cannot catch a hit that is numerically close but about something
-    # else; this can.
-    NO_DRAFT_TOKEN = 'KEIN_ENTWURF'.freeze
+    # else; this can. Opaque sentinel, deliberately not a natural-language word.
+    NO_DRAFT_TOKEN = 'NO_DRAFT'.freeze
 
     # Entries extracted at a finer detail level keep paths, hosts and systems -
     # useful to the agent, not something to mail a customer. The draft keeps the
     # steps and leaves those internals out.
-    INTERNALS_RULE = 'Uebernimm dabei keine internen Details aus den Faellen in den Antworttext: ' \
-                     'keine Server-, Host- oder Freigabenamen, IP-Adressen, Netzwerk- oder ' \
-                     'Server-Pfade, Benutzerkonten und nichts ueber andere Kunden. Beschreibe ' \
-                     'solche Schritte allgemein (z. B. "wir passen die Einstellung auf unserem ' \
-                     'Server an").'.freeze
+    INTERNALS_RULE = 'Не переноси в текст ответа внутренние детали из этих случаев: ' \
+                     'никаких имен серверов, хостов или общих ресурсов, IP-адресов, ' \
+                     'сетевых или серверных путей, учетных записей и ничего о других ' \
+                     'клиентах. Описывай такие шаги обобщенно (например, «мы изменим ' \
+                     'соответствующую настройку на нашем сервере»).'.freeze
 
     # Embedding is a small, fast call - it must not be allowed to spend the whole
     # request budget before the chat call has even started.
@@ -64,50 +64,45 @@ module RedmineExpertHelpdesk
     RERANK_TIMEOUT     = 5
 
     DEFAULT_PROMPT = <<~PROMPT.freeze
-      Du bist ein erfahrener Mitarbeiter im technischen Kundensupport und
-      formulierst die ANTWORT AN DEN KUNDEN zu genau diesem Ticket. Schreibe auf
-      Deutsch.
+      Ты — опытный сотрудник технической поддержки и составляешь ОТВЕТ КЛИЕНТУ
+      по этой конкретной заявке. Пиши на русском языке.
 
-      Zielgruppe ist der Kunde, nicht der Bearbeiter. Schreibe so, dass eine
-      Person ohne IT-Kenntnisse der Antwort folgen kann.
+      Аудитория — клиент, а не сотрудник. Пиши так, чтобы ответ мог понять
+      человек без ИТ-знаний.
 
-      Aufbau:
-      - Greife das Anliegen in ein bis zwei Saetzen auf, damit der Kunde sieht,
-        dass es verstanden wurde.
-      - Nenne danach konkret, was der Kunde tun soll. Ab drei Schritten als
-        nummerierte Liste; jeder Schritt ist genau eine ueberpruefbare Handlung.
-      - Schliesse mit einem kurzen Angebot zur Rueckmeldung, falls es damit nicht
-        behoben ist.
+      Структура:
+      - В одном-двух предложениях подтверди понимание обращения, чтобы клиент
+        видел, что его услышали.
+      - Затем конкретно укажи, что клиенту следует сделать. При трех и более
+        шагах — нумерованный список; каждый шаг — ровно одно проверяемое действие.
+      - Заверши кратким предложением связаться, если это не решит проблему.
 
-      Erfinde nichts:
-      - Verwende ausschliesslich Informationen aus dem Ticketverlauf und aus den
-        unten genannten Faellen der Wissensbasis.
-      - Nenne keine Versionsnummern, Pfade, Preise, Termine, Fristen,
-        Bearbeitungszeiten oder Zustaendigkeiten, die nicht im Ticket stehen.
-      - Sage nichts zu: Reparatur, Austausch, Gutschrift, Kulanz oder Garantie,
-        solange es nicht bereits im Ticketverlauf zugesagt wurde.
-      - Ist die Ursache unklar oder fehlen Angaben, frage genau diese Angaben ab,
-        statt eine Loesung zu vermuten. Eine ehrliche Rueckfrage ist besser als
-        ein geratener Loesungsweg.
+      Ничего не выдумывай:
+      - Используй исключительно информацию из переписки заявки и из указанных
+        ниже случаев базы знаний.
+      - Не называй номера версий, пути, цены, сроки, дедлайны, время обработки
+        или ответственных, которых нет в заявке.
+      - Не говори о: ремонте, замене, возврате денег, лояльности или гарантии,
+        пока это не было обещано в переписке заявки.
+      - Если причина неясна или данных не хватает, запроси именно эти данные,
+        а не предполагай решение. Честный уточняющий вопрос лучше, чем
+        угаданный путь решения.
 
-      Nichts Internes nach aussen:
-      - Keine Ticketnummern und keine Verweise auf andere Kunden, andere Tickets
-        oder auf die Wissensbasis. Formulierungen wie "wie in einem frueheren
-        Fall" sind verboten.
-      - Keine internen Notizen, Werkzeuge, System- oder Servernamen, keine
-        Zugangsdaten, keine Kollegennamen, keine Einkaufspreise, keine internen
-        Ablaeufe.
-      - Erwaehne nicht, dass dieser Text von einer KI erzeugt wurde, und schreibe
-        nicht ueber dich selbst.
+      Ничего внутреннего наружу:
+      - Никаких номеров заявок и никаких упоминаний других клиентов, других
+        заявок или базы знаний. Формулировки вроде «как в ранее похожем случае»
+        запрещены.
+      - Никаких внутренних заметок, инструментов, имен систем или серверов,
+        учетных данных, имен коллег, закупочных цен, внутренних процессов.
+      - Не упоминай, что этот текст создан ИИ, и не пиши о себе.
 
-      Form:
-      - Hoeflich, Sie-Anrede, sachlich, kurze Saetze, keine Floskelketten.
-      - Reiner Text, Leerzeilen als Absatztrennung. Keine Ueberschriften, keine
-        Tabellen, keine Code-Bloecke, keine Emojis.
-      - Gib ausschliesslich den Antworttext aus: keine Einleitung, keine
-        Erklaerung, keine Anfuehrungszeichen um den Text, keine
-        Codeblock-Markierung.
-      - Antworte auf Deutsch.
+      Форма:
+      - Вежливо, на «вы», по делу, короткие предложения, без канцелярских оборотов.
+      - Только текст, пустые строки для разделения абзацев. Без заголовков,
+        таблиц, блоков кода и эмодзи.
+      - Выведи исключительно текст ответа: без вступления, без пояснений,
+        без кавычек вокруг текста, без разметки кода.
+      - Пиши на русском языке.
     PROMPT
 
     # key => [needs knowledge-base grounding?, extra instruction]
@@ -116,18 +111,19 @@ module RedmineExpertHelpdesk
     # injection boundary - never pass a variant through from params unchecked.
     VARIANTS = {
       'standard' => [true, ''],
-      'steps'    => [true, 'Variante: Schritt-fuer-Schritt-Anleitung. Gib die Loesung als ' \
-                           'nummerierte Liste kleiner, einzeln ausfuehrbarer Schritte aus und ' \
-                           'nenne jeweils, woran der Kunde erkennt, dass der Schritt geklappt hat.'],
-      'short'    => [true, 'Variante: Kurzantwort. Hoechstens fuenf Saetze, keine nummerierte ' \
-                           'Liste, nur der wichtigste naechste Schritt.'],
+      'steps'    => [true, 'Вариант: пошаговая инструкция. Выдай решение в виде ' \
+                           'нумерованного списка небольших, отдельно выполнимых шагов и ' \
+                           'укажи для каждого, по какому признаку клиент поймет, что шаг ' \
+                           'удался.'],
+      'short'    => [true, 'Вариант: краткий ответ. Не более пяти предложений, без ' \
+                           'нумерованного списка, только самый важный следующий шаг.'],
       # Needs no grounding: it proposes nothing. This is what makes the feature
       # usable on day one against an empty knowledge base without softening the
       # refusal rule for the variants that do propose a fix.
-      'ask'      => [false, 'Variante: Rueckfrage. Die vorliegenden Angaben reichen fuer eine ' \
-                            'Loesung nicht aus. Frage hoeflich genau die fehlenden Angaben ab ' \
-                            '(kurze Liste) und begruende knapp, wofuer sie gebraucht werden. ' \
-                            'Schlage ausdruecklich KEINE Loesung und keine Ursache vor.']
+      'ask'      => [false, 'Вариант: уточняющий запрос. Имеющихся данных для решения ' \
+                            'недостаточно. Вежливо запроси именно недостающие сведения ' \
+                            '(кратким списком) и коротко поясни, для чего они нужны. ' \
+                            'Явно НЕ предлагай ни решения, ни причины.']
     }.freeze
 
     DEFAULT_VARIANT = 'standard'.freeze
@@ -330,20 +326,20 @@ module RedmineExpertHelpdesk
       header  = mailbox ? TemplateRenderer.render(mailbox.reply_header.to_s, context).to_s.strip : ''
       footer  = mailbox ? TemplateRenderer.render(mailbox.effective_footer_template.to_s, context).to_s.strip : ''
 
-      lines = ['---', 'Rahmen der Mail beim Versand:']
+      lines = ['---', 'Рамка письма при отправке:']
       lines << if header.present?
-                 "Dieser Text wird automatisch VORANGESTELLT:\n\"\"\"\n#{clip(header)}\n\"\"\"\n" \
-                   'Wiederhole ihn nicht und beginne nicht mit einer eigenen Anrede.'
+                 "Этот текст автоматически ДОБАВЛЯЕТСЯ ПЕРЕД ответом:\n\"\"\"\n#{clip(header)}\n\"\"\"\n" \
+                   'Не повторяй его и не начинай с собственного приветствия.'
                else
-                 'Es wird kein Kopftext ergaenzt: Beginne mit einer passenden Anrede an den Kunden.'
+                 'Верхний текст не добавляется: начни с подходящего обращения к клиенту.'
                end
       lines << if footer.present?
-                 "Dieser Text wird automatisch ANGEHAENGT:\n\"\"\"\n#{clip(footer)}\n\"\"\"\n" \
-                   'Wiederhole ihn nicht und ende mit dem letzten inhaltlichen Satz - ohne eigene ' \
-                   'Grussformel, ohne Namen, ohne Signatur.'
+                 "Этот текст автоматически ПРИСОЕДИНЯЕТСЯ В КОНЦЕ:\n\"\"\"\n#{clip(footer)}\n\"\"\"\n" \
+                   'Не повторяй его и заверши последним содержательным предложением — без собственной ' \
+                   'прощальной формулы, без имени, без подписи.'
                else
-                 'Es wird kein Fusstext ergaenzt: Schliesse mit einer kurzen Grussformel, aber ' \
-                   'ohne Namen und ohne Signatur.'
+                 'Нижний текст не добавляется: заверши краткой прощальной формулой, но ' \
+                   'без имени и без подписи.'
                end
       lines.join("\n")
     end
@@ -364,14 +360,14 @@ module RedmineExpertHelpdesk
       return nil if hits.empty?
 
       "---\n" \
-        "Aehnliche frueher geloeste Faelle aus der Wissensbasis. NUR INTERN als fachliche\n" \
-        "Grundlage - erwaehne sie im Antworttext mit keinem Wort:\n" \
+        "Похожие ранее решенные случаи из базы знаний. ТОЛЬКО ВНУТРЕННЯЯ\n" \
+        "фактическая основа — не упоминай их в тексте ответа ни словом:\n" \
         "#{KnowledgeRetrieval.format_hits(hits, :with_issue_ids => false)}\n\n" \
-        'Passt einer der Faelle zum Anliegen, formuliere dessen Loesung als Anleitung fuer den ' \
-        'Kunden um. ' \
+        'Если какой-либо из случаев подходит к обращению, переформулируй его решение ' \
+        'как инструкцию для клиента. ' \
         "#{INTERNALS_RULE} " \
-        'Passt keiner davon wirklich, antworte ausschliesslich mit dem Wort ' \
-        "#{NO_DRAFT_TOKEN} und sonst nichts."
+        'Если ни один из случаев по-настоящему не подходит, ответь исключительно словом ' \
+        "#{NO_DRAFT_TOKEN} и больше ничем."
     end
 
     # Models like to wrap the answer, announce it, or invent a subject line that
@@ -380,7 +376,9 @@ module RedmineExpertHelpdesk
       s = raw.to_s.strip
       s = s.sub(/\A```[a-z]*\s*/i, '').sub(/```\s*\z/, '').strip
       s = s.sub(/\A(hier ist|hier der|gerne|anbei)[^\n]{0,60}:\s*\n+/i, '')
+      s = s.sub(/\A(вот ваш ответ|вот ответ|по вашему запросу)[^\n]{0,60}:\s*\n+/i, '')
       s = s.sub(/\ABetreff:[^\n]*\n+/i, '')
+      s = s.sub(/\AТема:[^\n]*\n+/i, '')
       s.strip
     end
 

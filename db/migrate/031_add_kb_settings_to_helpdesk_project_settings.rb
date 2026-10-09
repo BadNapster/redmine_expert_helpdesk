@@ -1,8 +1,8 @@
-# Pro-Projekt-Steuerung der Wissensbasis (RAG):
-#  - kb_ingest_mode:      off | auto | manual  (traegt dieses Projekt geloeste
-#                         Tickets zur Wissensbasis bei, und wie?)
-#  - kb_proposal_display: off | summary | sidebar | both  (nutzt dieses Projekt
-#                         die Wissensbasis fuer Loesungsvorschlaege, und wo?)
+# Per-project control of the knowledge base (RAG):
+#  - kb_ingest_mode:      off | auto | manual  (does this project contribute solved
+#                         tickets to the knowledge base, and how?)
+#  - kb_proposal_display: off | summary | sidebar | both  (does this project
+#                         use the knowledge base for solution proposals, and where?)
 class AddKbSettingsToHelpdeskProjectSettings < ActiveRecord::Migration[6.1]
   def change
     change_table :helpdesk_project_settings, :bulk => true do |t|

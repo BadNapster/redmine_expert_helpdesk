@@ -1,7 +1,7 @@
-# Manuelles (Neu-)Erzeugen der KI-Zusammenfassung eines Tickets aus der
-# Ticket-Seitenleiste. Stoesst den HelpdeskAiSummaryJob mit force=true an
-# (unabhaengig von der projektspezifischen Aktivierung/Umfang), sofern die KI
-# zentral aktiviert und konfiguriert ist.
+# Manually (re-)creating the AI summary of a ticket from the ticket sidebar.
+# Triggers HelpdeskAiSummaryJob with force=true (regardless of the project-
+# specific activation/scope), provided the AI is centrally enabled and
+# configured.
 class HelpdeskAiController < ApplicationController
   before_action :find_issue_and_project
   before_action :authorize_regenerate
@@ -14,7 +14,7 @@ class HelpdeskAiController < ApplicationController
       return redirect_to issue_path(@issue)
     end
 
-    # Erstmail des Tickets zusammenfassen (aelteste eingehende Nachricht).
+    # Summarize the ticket's first mail (oldest incoming message).
     message = HelpdeskMessage.where(:issue_id => @issue.id, :direction => 'in').order(:id => :asc).first
     HelpdeskAiSummaryJob.perform_later(@issue.id, :message_id => message&.id, :force => true)
 

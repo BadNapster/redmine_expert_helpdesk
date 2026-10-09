@@ -1,6 +1,6 @@
-# Ausloesen des Mailabrufs:
-#   - fetch:     Button in den Projekteinstellungen (Berechtigung :fetch_helpdesk_mail)
-#   - fetch_all: Globaler Endpunkt fuer curl/CronJob, gesichert per statischem API-Key
+# Triggers the mail fetch:
+#   - fetch:     button in the project settings (permission :fetch_helpdesk_mail)
+#   - fetch_all: global endpoint for curl/CronJob, secured by a static API key
 #   - maintenance: status (GET) and switch (POST) of maintenance mode, same key as fetch_all
 class HelpdeskFetchController < ApplicationController
   before_action :find_project_by_project_id, :only => [:fetch]
@@ -45,7 +45,7 @@ class HelpdeskFetchController < ApplicationController
 
   def fetch_all
     unless valid_api_key?('fetch_api_key')
-      render :json => { :error => 'Ungueltiger API-Key' }, :status => 401
+      render :json => { :error => l(:error_helpdesk_invalid_api_key) }, :status => 401
       return
     end
 
@@ -63,17 +63,17 @@ class HelpdeskFetchController < ApplicationController
       begin
         summary[mailbox.mailbox_address] = RedmineExpertHelpdesk::MailProcessor.new(mailbox).process_all.to_h
       rescue StandardError => e
-        Rails.logger.error "Helpdesk: Abruf fuer #{mailbox.mailbox_address} fehlgeschlagen: #{e.message}"
+        Rails.logger.error "Helpdesk: fetch for #{mailbox.mailbox_address} failed: #{e.message}"
         summary[mailbox.mailbox_address] = { :error => e.message }
       end
     end
 
-    # Phishing-Feeds bei Bedarf aktualisieren (Piggyback auf den Cron-Abruf).
-    # Fehler duerfen den Mailabruf nie beeintraechtigen.
+    # Refresh the phishing feeds when needed (piggybacked on the cron fetch).
+    # Errors must never affect the mail fetch.
     begin
       RedmineExpertHelpdesk::PhishingFeeds.run_if_stale
     rescue StandardError => e
-      Rails.logger.error "Helpdesk: Feed-Sync im fetch_all fehlgeschlagen: #{e.message}"
+      Rails.logger.error "Helpdesk: feed sync in fetch_all failed: #{e.message}"
     end
 
     render :json => { :fetched_at => Time.current.iso8601, :mailboxes => summary }
@@ -84,7 +84,7 @@ class HelpdeskFetchController < ApplicationController
   # Poll GET until safe_to_stop is true before scaling the pods down.
   def maintenance
     unless valid_api_key?('fetch_api_key')
-      render :json => { :error => 'Ungueltiger API-Key' }, :status => 401
+      render :json => { :error => l(:error_helpdesk_invalid_api_key) }, :status => 401
       return
     end
 
@@ -99,19 +99,19 @@ class HelpdeskFetchController < ApplicationController
     render :json => RedmineExpertHelpdesk::Maintenance.status
   end
 
-  # Globale SLA-Pruefung fuer einen externen CronJob (z. B. via curl), gesichert
-  # per eigenem API-Key. Loest ausschliesslich die SLA-Ueberschreitungspruefung
-  # aus; ueberlappende Laeufe werden per Cache-Lock in run_if_due verhindert.
+  # Global SLA check for an external cron job (e.g. via curl), secured by its
+  # own API key. Runs only the SLA breach check; overlapping runs are prevented
+  # by the cache lock in run_if_due.
   def sla_check
     unless valid_api_key?('sla_api_key')
-      render :json => { :error => 'Ungueltiger API-Key' }, :status => 401
+      render :json => { :error => l(:error_helpdesk_invalid_api_key) }, :status => 401
       return
     end
 
     notified = RedmineExpertHelpdesk::SlaBreachCheck.run_if_due
 
     if notified == false
-      # Lock gehalten => ein anderer Lauf ist aktiv, kein ueberlappender Check
+      # Lock held => another run is active, no overlapping check
       render :json => { :checked_at => Time.current.iso8601, :skipped => true }
     else
       render :json => { :checked_at => Time.current.iso8601, :notified => notified }
@@ -120,9 +120,9 @@ class HelpdeskFetchController < ApplicationController
 
   private
 
-  # Timing-sicherer Vergleich des uebergebenen ?key= gegen die in den
-  # Plugin-Einstellungen hinterlegte API-Key-Einstellung. Leerer/fehlender
-  # konfigurierter Key => Endpunkt deaktiviert (Vergleich schlaegt fehl).
+  # Timing-safe comparison of the given ?key= against the API key setting stored
+  # in the plugin settings. A blank/missing configured key => the endpoint is
+  # disabled (the comparison fails).
   def valid_api_key?(setting_key)
     configured = Setting.plugin_redmine_expert_helpdesk[setting_key].to_s
     provided   = params[:key].to_s

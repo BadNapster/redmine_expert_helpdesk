@@ -13,23 +13,23 @@ module RedmineExpertHelpdesk
   class InfoRequestMailer
     # Central default text of the follow-up. {{missing_info}} is replaced with the
     # rendered list of missing details; without that placeholder the customer gets
-    # a follow-up without ever learning what is missing. German on purpose - this
+    # a follow-up without ever learning what is missing. Russian on purpose - this
     # is user-facing content, editable in the settings form.
     DEFAULT_BODY = <<~'BODY'.freeze
-      Guten Tag {{contact.name}},
+      Здравствуйте, {{contact.name}},
 
-      vielen Dank fuer Ihre Nachricht. Wir haben Ihre Anfrage unter der Nummer
-      [#{{issue.id}}] aufgenommen.
+      спасибо за ваше сообщение. Мы зарегистрировали ваше обращение под номером
+      [#{{issue.id}}].
 
-      Damit wir Ihnen schnell helfen koennen, benoetigen wir noch ein paar Angaben:
+      Чтобы помочь вам быстрее, нам нужно еще несколько сведений:
 
       {{missing_info}}
 
-      Bitte antworten Sie einfach auf diese E-Mail. Ihre Antwort wird automatisch
-      Ihrer Anfrage zugeordnet.
+      Пожалуйста, просто ответьте на это письмо — ваш ответ будет автоматически
+      привязан к обращению.
 
-      Mit freundlichen Gruessen
-      Ihr Support-Team
+      С уважением,
+      ваша служба поддержки
     BODY
 
     class << self
@@ -145,7 +145,7 @@ module RedmineExpertHelpdesk
           :private_notes => private_note
         )
       rescue StandardError => e
-        Rails.logger.warn("[helpdesk][info_request] Notiz konnte nicht gespeichert werden " \
+        Rails.logger.warn("[helpdesk][info_request] Note could not be saved " \
                           "(##{issue.id}): #{e.message}")
       end
     end

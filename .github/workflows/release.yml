@@ -1,24 +1,24 @@
 name: Release
 
-# Baut bei jedem gepushten vX.Y.Z-Tag ein Plugin-Archiv (.zip + .tar.gz) und
-# veroeffentlicht ein GitHub-Release mit Notizen aus der CHANGELOG.md.
-# Laeuft NUR auf Tags (nicht auf Branches/PRs) – Releases entstehen also nur,
-# wenn der Maintainer bewusst einen Tag pusht. Ablauf zum Veroeffentlichen:
-#   1. version '...' in init.rb setzen, committen, nach main pushen
-#   2. git tag -a vX.Y.Z -m 'Release X.Y.Z' (auf denselben Commit) && git push origin vX.Y.Z
-#      Annotiert (-a), nicht leichtgewichtig: git describe - und damit git submodule status
-#      im uebergeordneten Deployment-Repo - sieht nur annotierte Tags.
-# Die Versionsnummer lebt in init.rb (Single Source of Truth); der Workflow
-# PRUEFT nur, dass init.rb-Version und Tag uebereinstimmen, und paketiert unveraendert.
+# On every pushed vX.Y.Z tag, builds a plugin archive (.zip + .tar.gz) and
+# publishes a GitHub release with notes from the CHANGELOG.md.
+# Runs ONLY on tags (not on branches/PRs) - releases only happen when the
+# maintainer deliberately pushes a tag. Publish flow:
+#   1. Set version '...' in init.rb, commit, push to main
+#   2. git tag -a vX.Y.Z -m 'Release X.Y.Z' (on the same commit) && git push origin vX.Y.Z
+#      Annotated (-a), not lightweight: git describe - and thus git submodule status
+#      in the parent deployment repo - only sees annotated tags.
+# The version number lives in init.rb (single source of truth); the workflow only
+# CHECKS that init.rb version and tag match, and packages unchanged.
 
 on:
   push:
     tags: [ 'v*' ]
 
 permissions:
-  contents: write            # zum Anlegen des Releases + Hochladen der Archive
+  contents: write            # to create the release and upload the archives
 
-# Laeufe desselben Tags nicht abbrechen (ein Release soll fertig werden).
+# Do not cancel runs of the same tag (a release must finish).
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
@@ -29,15 +29,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Vollstaendige Historie + Tags auschecken (fuer den Diff der
-      #    Release-Notes gegen den vorherigen Tag).
-      - name: Checkout (volle Historie + Tags)
+      # 1. Check out the full history + tags (for the release-notes diff
+      #    against the previous tag).
+      - name: Checkout (full history + tags)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # 2. Version aus dem Tag ableiten und als semver validieren.
-      - name: Version aus Tag ableiten + validieren
+      # 2. Derive the version from the tag and validate it as semver.
+      - name: Derive and validate version from tag
         id: ver
         run: |
           TAG="${GITHUB_REF_NAME}"
@@ -51,7 +51,7 @@ jobs:
           SEMVER="$SEMVER"'(-(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)'
           SEMVER="$SEMVER"'(\.(0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?$'
           if ! echo "$VER" | grep -Eq "$SEMVER"; then
-            echo "::error::Tag '$TAG' ist keine gueltige semver-Version (erwartet vX.Y.Z)"
+            echo "::error::Tag '$TAG' is not a valid semver version (expected vX.Y.Z)"
             exit 1
           fi
           echo "version=$VER" >> "$GITHUB_OUTPUT"
@@ -61,29 +61,28 @@ jobs:
             *)   echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
           esac
 
-      # 3. Sicherstellen, dass die in init.rb gepflegte Version zum Tag passt.
-      #    init.rb ist die Single Source of Truth – der Tag muss darauf zeigen.
-      - name: init.rb-Version gegen Tag pruefen
+      # 3. Make sure the version maintained in init.rb matches the tag.
+      #    init.rb is the single source of truth - the tag must point to it.
+      - name: Check init.rb version against tag
         run: |
           INIT_VER=$(sed -nE "s/^[[:space:]]*version '([^']*)'.*/\1/p" init.rb | head -1)
           echo "init.rb: '${INIT_VER}'  /  Tag: '${{ steps.ver.outputs.version }}'"
           if [ "$INIT_VER" != "${{ steps.ver.outputs.version }}" ]; then
-            echo "::error::init.rb-Version '${INIT_VER}' stimmt nicht mit dem Tag '${{ steps.ver.outputs.version }}' ueberein. Bitte version in init.rb setzen, committen und den Tag auf diesen Commit zeigen lassen."
+            echo "::error::init.rb version '${INIT_VER}' does not match the tag '${{ steps.ver.outputs.version }}'. Set version in init.rb, commit, and point the tag at that commit."
             exit 1
           fi
 
-      # 4. Release-Notes aus der CHANGELOG.md erzeugen: der Abschnitt
-      #    "## [<version>]", der zum getaggten Release gehoert.
+      # 4. Generate release notes from the CHANGELOG.md: the "## [<version>]"
+      #    section that belongs to the tagged release.
       #
-      #    Frueher wurde stattdessen der Diff gegen den vorherigen Tag genommen.
-      #    Das ging nur so lange gut, wie die CHANGELOG-Abschnitte nie umsortiert
-      #    wurden: git diff arbeitet zeilenweise, ein verschobener Block ist fuer
-      #    ihn "geloescht und neu hinzugefuegt". Als die Ueberschriften 2026-08-04
-      #    auf echte Versionen aufgeteilt wurden, waeren so die Eintraege von
-      #    0.2.1 und 0.2.0 in den Notes von 0.2.2 gelandet. Der Abschnitt zur
-      #    getaggten Version ist die direkte Antwort auf die Frage und braucht
-      #    den Vergleich gar nicht.
-      - name: Release-Notes aus CHANGELOG erzeugen
+      #    Previously the diff against the previous tag was used instead.
+      #    That only worked as long as the CHANGELOG sections were never
+      #    reordered: git diff works line by line, a moved block reads as
+      #    "deleted and re-added". When the headings were split into real
+      #    versions on 2026-08-04, the entries of 0.2.1 and 0.2.0 would have
+      #    landed in the notes of 0.2.2. The section of the tagged version is
+      #    the direct answer to the question and does not need the comparison.
+      - name: Generate release notes from CHANGELOG
         run: |
           VER="${{ steps.ver.outputs.version }}"
           awk -v ver="$VER" '
@@ -92,7 +91,7 @@ jobs:
             f { print }
           ' CHANGELOG.md > SECTION.md
           if ! grep -q '[^[:space:]]' SECTION.md; then
-            echo "::error::CHANGELOG.md hat keinen Abschnitt '## [${VER}]'. Bitte den Eintrag fuer diese Version anlegen, committen und den Tag darauf zeigen lassen."
+            echo "::error::CHANGELOG.md has no section '## [${VER}]'. Add the entry for this version, commit, and point the tag at it."
             exit 1
           fi
           {
@@ -103,10 +102,10 @@ jobs:
           echo "----- RELEASE_NOTES.md -----"
           cat RELEASE_NOTES.md
 
-      # 5. Plugin paketieren: Laufzeit-Dateien unter einem Top-Level-Ordner
-      #    redmine_expert_helpdesk/ (entpackt direkt nach redmine/plugins/).
-      #    Dev-/CI-/Doku-nur-intern-Dateien werden ausgeschlossen.
-      - name: Plugin paketieren (.zip + .tar.gz)
+      # 5. Package the plugin: runtime files under a top-level folder
+      #    redmine_expert_helpdesk/ (unpacks directly into redmine/plugins/).
+      #    Dev/CI/doc-internal-only files are excluded.
+      - name: Package plugin (.zip + .tar.gz)
         run: |
           VER="${{ steps.ver.outputs.version }}"
           STAGE="$RUNNER_TEMP/pkg/redmine_expert_helpdesk"
@@ -123,12 +122,12 @@ jobs:
             zip -rq "$GITHUB_WORKSPACE/redmine_expert_helpdesk-${VER}.zip"    redmine_expert_helpdesk
             tar czf "$GITHUB_WORKSPACE/redmine_expert_helpdesk-${VER}.tar.gz" redmine_expert_helpdesk
           )
-          echo "----- Paketinhalt (.zip) -----"
+          echo "----- Package contents (.zip) -----"
           unzip -l "redmine_expert_helpdesk-${VER}.zip" | head -n 40
 
-      # 6. GitHub-Release fuer den Tag anlegen und beide Archive anhaengen.
-      - name: GitHub-Release anlegen
-        uses: softprops/action-gh-release@v2   # nutzt GITHUB_TOKEN automatisch
+      # 6. Create the GitHub release for the tag and attach both archives.
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2   # uses GITHUB_TOKEN automatically
         with:
           name: redmine_expert_helpdesk ${{ steps.ver.outputs.version }}
           body_path: RELEASE_NOTES.md

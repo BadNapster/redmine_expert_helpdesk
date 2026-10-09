@@ -39,11 +39,11 @@ class HelpdeskKbExtractSettingsTest < Redmine::IntegrationTest
       RedmineExpertHelpdesk::KnowledgeExtractor::DETAIL_LEVELS.each { |d| assert_select 'option[value=?]', d }
     end
     assert_select 'select#hd_kb_extract_prompt_mode'
-    assert_select 'textarea#hd_kb_extract_prompt[placeholder*=?]', 'Fehlercode'
+    assert_select 'textarea#hd_kb_extract_prompt[placeholder*=?]', 'код ошибки'
     # One prompt per option so the placeholder can follow the select.
     prompts = JSON.parse(css_select('textarea#hd_kb_extract_prompt').first['data-prompts'])
     assert_equal ['', *RedmineExpertHelpdesk::KnowledgeExtractor::DETAIL_LEVELS].sort, prompts.keys.sort
-    assert_includes prompts['most_specific'], 'Verallgemeinere'
+    assert_includes prompts['most_specific'], 'обобщай'
     assert_equal prompts['specific'], prompts['']
   end
 
@@ -105,6 +105,6 @@ class HelpdeskKbExtractSettingsTest < Redmine::IntegrationTest
     # The seeded old default is not the admin's own text: the field is empty and
     # the selected level's prompt shows as placeholder.
     assert_select 'textarea#hd_kb_extract_prompt', :text => ''
-    assert_select 'textarea#hd_kb_extract_prompt[placeholder*=?]', 'Fehlercode'
+    assert_select 'textarea#hd_kb_extract_prompt[placeholder*=?]', 'код ошибки'
   end
 end

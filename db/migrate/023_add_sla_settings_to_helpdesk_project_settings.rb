@@ -1,5 +1,5 @@
-# SLA-Einstellungen pro Projekt: Zielzeiten (Geschaeftsminuten), Arbeitszeiten
-# (Wochentage + Zeitspanne) und Benachrichtigung bei Ueberschreitung.
+# SLA settings per project: target times (business minutes), working hours
+# (weekdays + time span) and notification on breach.
 class AddSlaSettingsToHelpdeskProjectSettings < ActiveRecord::Migration[6.1]
   def change
     change_table :helpdesk_project_settings, :bulk => true do |t|

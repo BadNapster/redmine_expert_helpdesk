@@ -1,19 +1,19 @@
-# SLA-Kernlogik: Zielzeiten aufloesen (Prio-Override -> Projekt-Default),
-# Uhren-Status berechnen und Tracking-Ereignisse festhalten.
+# SLA core logic: resolve target times (priority override -> project default),
+# compute clock status and record tracking events.
 #
-# Status je Uhr:
-#   :met           - erledigt innerhalb der Zielzeit
-#   :breached_done - erledigt, aber Zielzeit ueberschritten
-#   :running       - laeuft, < 80 % der Zielzeit verbraucht
-#   :warning       - laeuft, >= 80 % der Zielzeit verbraucht
-#   :breached      - laeuft, Zielzeit ueberschritten
+# Status per clock:
+#   :met           - done within the target time
+#   :breached_done - done, but target time exceeded
+#   :running       - running, < 80 % of the target time used
+#   :warning       - running, >= 80 % of the target time used
+#   :breached      - running, target time exceeded
 module RedmineExpertHelpdesk
   class Sla
     WARNING_RATIO = 0.8
 
-    # SLA gilt fuer ein Ticket, wenn: im Projekt aktiviert UND das Ticket nach
-    # der Aktivierung erstellt wurde (verhindert, dass beim Einschalten alle
-    # Bestandstickets sofort "rot" werden).
+    # SLA applies to a ticket when: enabled in the project AND the ticket was
+    # created after enabling (prevents all existing tickets from turning "red"
+    # immediately when it is switched on).
     def self.enabled_for?(issue, setting = nil)
       setting ||= HelpdeskProjectSetting.for_project(issue.project)
       return false unless setting.persisted? && setting.sla_enabled?
@@ -22,7 +22,7 @@ module RedmineExpertHelpdesk
       true
     end
 
-    # Zielzeiten in Geschaeftsminuten: Prioritaets-Override vor Projekt-Default.
+    # Target times in business minutes: priority override before project default.
     def self.targets_for(issue, setting = nil)
       setting ||= HelpdeskProjectSetting.for_project(issue.project)
       override = HelpdeskSlaPriority.find_by(:project_id => issue.project_id, :priority_id => issue.priority_id)
@@ -32,7 +32,7 @@ module RedmineExpertHelpdesk
       }
     end
 
-    # Gesamtstatus beider Uhren, nil wenn SLA nicht gilt.
+    # Overall status of both clocks, nil when SLA does not apply.
     def self.state_for(issue, info = nil)
       setting = HelpdeskProjectSetting.for_project(issue.project)
       return nil unless enabled_for?(issue, setting)
@@ -41,10 +41,10 @@ module RedmineExpertHelpdesk
       targets = targets_for(issue, setting)
       solution_done_at = issue.closed? ? issue.closed_on : nil
 
-      # Reaktionsuhr endet spaetestens beim Loesen/Schliessen des Tickets: liegt
-      # keine erfasste Erstreaktion vor, gilt der Schliesszeitpunkt als Abschluss
-      # (sonst liefe die Reaktionsuhr auf geschlossenen Tickets ewig weiter und
-      # koennte nie erfuellt/ueberschritten sein).
+      # The reaction clock ends at the latest when the ticket is solved/closed: if
+      # no first reaction was recorded, the closing time counts as completion
+      # (otherwise the reaction clock would keep running on closed tickets forever
+      # and could never be met/exceeded).
       first_response = info&.first_response_at
       reaction_done_at = first_response || solution_done_at
       reaction_minutes = first_response ? info&.reaction_business_minutes : nil
@@ -57,7 +57,7 @@ module RedmineExpertHelpdesk
       }
     end
 
-    # Status einer einzelnen Uhr, nil wenn kein Ziel konfiguriert.
+    # Status of a single clock, nil when no target is configured.
     def self.clock_state(issue, target_minutes, done_at, done_minutes, setting)
       target = target_minutes.to_i
       return nil if target <= 0
@@ -89,11 +89,11 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # --- Vorberechnete Faelligkeiten (fuer Ticket-Grid-Spalten/-Filter) ------
+    # --- Precomputed deadlines (for ticket grid columns/filters) -------------
 
-    # Berechnet und speichert die absoluten Faelligkeits-Zeitpunkte beider Uhren
-    # auf dem HelpdeskTicketInfo-Satz. Bei nicht (mehr) gueltigem SLA werden die
-    # Werte geleert. Wiederverwendet BusinessHours#due_at und targets_for.
+    # Computes and stores the absolute deadline timestamps of both clocks on the
+    # HelpdeskTicketInfo row. Values are cleared when SLA is no longer valid.
+    # Reuses BusinessHours#due_at and targets_for.
     def self.refresh_deadlines!(issue, info = nil)
       setting = HelpdeskProjectSetting.for_project(issue.project)
       info  ||= HelpdeskTicketInfo.for_issue(issue)
@@ -120,11 +120,11 @@ module RedmineExpertHelpdesk
 
       info.save! if info.changed?
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk/SLA: refresh_deadlines fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk/SLA: refresh_deadlines for ticket ##{issue.id} failed: #{e.message}"
     end
 
-    # Guenstiger Status einer Uhr aus den gespeicherten Zeitstempeln (spiegelt die
-    # SQL-CASE-Logik der Grid-Spalten, ohne Geschaeftszeit-Schleife). nil = kein SLA.
+    # Cheaper status of a clock from the stored timestamps (mirrors the
+    # SQL CASE logic of the grid columns, without the business-hours loop). nil = no SLA.
     def self.clock_status_from(due_at, warn_at, done_at)
       return nil if due_at.nil?
 
@@ -142,15 +142,15 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Faelligkeiten aller offenen, SLA-relevanten Tickets eines Projekts neu
-    # berechnen (nach Aenderung der Projekt-/Prioritaets-Einstellungen).
+    # Recompute the deadlines of all open, SLA-relevant tickets of a project
+    # (after project/priority settings changed).
     def self.refresh_project_deadlines!(project)
       Issue.open.where(:project_id => project.id).find_each do |issue|
         refresh_deadlines!(issue)
       end
     end
 
-    # --- Tracking-Ereignisse -------------------------------------------------
+    # --- Tracking events -----------------------------------------------------
 
     # Records the first reaction (public agent note or customer reply mail).
     #
@@ -181,10 +181,10 @@ module RedmineExpertHelpdesk
         info.save!
       end
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk/SLA: record_first_response fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk/SLA: record_first_response for ticket ##{issue.id} failed: #{e.message}"
     end
 
-    # Loesungszeit beim Schliessen berechnen bzw. beim Wiedereroeffnen zuruecksetzen.
+    # Compute the solution time on close, or reset it on reopen.
     def self.sync_solution!(issue)
       setting = HelpdeskProjectSetting.for_project(issue.project)
       return unless setting.persisted? && setting.sla_enabled?
@@ -203,7 +203,7 @@ module RedmineExpertHelpdesk
       end
       info.save!
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk/SLA: sync_solution fuer Ticket ##{issue.id} fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk/SLA: sync_solution for ticket ##{issue.id} failed: #{e.message}"
     end
   end
 end

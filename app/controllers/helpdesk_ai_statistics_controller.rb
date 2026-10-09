@@ -1,7 +1,6 @@
-# Projektbezogene KI-Statistik (KI-Nutzung/Kostenrisiko). Zugriff nur mit der
-# globalen Berechtigung view_helpdesk_ai_statistics (typischerweise eine Rolle
-# "ai-admin"), unabhaengig von der Projektmitgliedschaft. @project wird nur zum
-# Filtern der Daten geladen.
+# Project-scoped AI statistics (AI usage/cost risk). Only accessible with the
+# global permission view_helpdesk_ai_statistics (typically an "ai-admin" role),
+# regardless of project membership. @project is loaded only to filter the data.
 class HelpdeskAiStatisticsController < ApplicationController
   include HelpdeskStatsDateRange
 

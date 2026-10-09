@@ -20,7 +20,7 @@ class HelpdeskCompletenessJob < ActiveJob::Base
   def perform(issue_id, message_id: nil, force: false)
     settings = Setting.plugin_redmine_expert_helpdesk
     unless settings['info_request_enabled'].to_s == '1'
-      return log(:debug, "global deaktiviert (issue ##{issue_id})")
+      return log(:debug, "disabled globally (issue ##{issue_id})")
     end
 
     issue = Issue.find_by(:id => issue_id)
@@ -28,20 +28,20 @@ class HelpdeskCompletenessJob < ActiveJob::Base
 
     ps = HelpdeskProjectSetting.for_project(issue.project)
     unless ps.info_request_enabled?
-      return log(:debug, "im Projekt #{issue.project.identifier} deaktiviert")
+      return log(:debug, "disabled in project #{issue.project.identifier}")
     end
 
     # Cheap early-out so an already-answered ticket never reaches the AI call. The
     # authoritative, race-free check is the claim further down.
     ticket_info = HelpdeskTicketInfo.for_issue(issue)
     if !force && ticket_info&.info_request_sent?
-      return log(:info, "Rueckfrage zu ##{issue.id} bereits gesendet - uebersprungen")
+      return log(:info, "follow-up for ##{issue.id} already sent - skipped")
     end
 
     contact = ticket_info&.helpdesk_contact
     mailbox = ticket_info&.helpdesk_mailbox
     if contact.nil? || contact.email.blank? || mailbox.nil?
-      return log(:info, "##{issue.id}: kein Kontakt/Postfach verknuepft - uebersprungen")
+      return log(:info, "##{issue.id}: no contact/mailbox linked - skipped")
     end
 
     message = message_id && HelpdeskMessage.find_by(:id => message_id)
@@ -50,7 +50,7 @@ class HelpdeskCompletenessJob < ActiveJob::Base
     # ticket, but a follow-up to it bounces or loops. Checked before the rule
     # evaluation so the AI mode never burns tokens on it either.
     if (reason = automated_sender_reason(ps, contact, message))
-      return log(:info, "##{issue.id}: automatischer Absender (#{reason}) - keine Rueckfrage")
+      return log(:info, "##{issue.id}: automated sender (#{reason}) - no follow-up")
     end
 
     text = source_text(issue, message)
@@ -59,13 +59,13 @@ class HelpdeskCompletenessJob < ActiveJob::Base
     return if verdict.nil?
 
     if verdict.complete?
-      return log(:debug, "##{issue.id}: Mail als ausreichend bewertet (#{verdict.source})")
+      return log(:debug, "##{issue.id}: mail judged sufficient (#{verdict.source})")
     end
 
     # Claim before sending: the guard above is a cheap filter, this is the atomic
     # one. Two jobs racing on the same issue must not both mail the customer.
     unless HelpdeskTicketInfo.claim_info_request!(issue, :force => force)
-      return log(:info, "##{issue.id}: Rueckfrage bereits beansprucht - uebersprungen")
+      return log(:info, "##{issue.id}: follow-up already claimed - skipped")
     end
 
     begin
@@ -80,16 +80,16 @@ class HelpdeskCompletenessJob < ActiveJob::Base
       # The claim stays deliberately - see HelpdeskTicketInfo.claim_info_request!.
       # A missed follow-up is repairable, a duplicate one is not. Logged at error
       # level because nothing else makes this visible: no mail, no journal note.
-      return log(:error, "##{issue.id}: Rueckfrage beansprucht, aber Versand " \
-                         "fehlgeschlagen (#{e.class}): #{e.message}")
+      return log(:error, "##{issue.id}: follow-up claimed, but sending " \
+                         "failed (#{e.class}): #{e.message}")
     end
 
     apply_status(issue, ps)
 
-    log(:info, "##{issue.id}: Rueckfrage an #{contact.email} gesendet " \
-               "(#{verdict.source}, #{verdict.reasons.size} Punkt(e))")
+    log(:info, "##{issue.id}: follow-up sent to #{contact.email} " \
+               "(#{verdict.source}, #{verdict.reasons.size} reason(s))")
   rescue StandardError => e
-    Rails.logger.error("[helpdesk][info_request] Pruefung fehlgeschlagen " \
+    Rails.logger.error("[helpdesk][info_request] check failed " \
                        "(##{issue_id}): #{e.class}: #{e.message}")
   end
 
@@ -109,18 +109,18 @@ class HelpdeskCompletenessJob < ActiveJob::Base
 
   def ai_verdict(issue, ps, settings, text, subject, attachments)
     unless RedmineExpertHelpdesk::AiFeatures.ai_enabled?
-      log(:info, "##{issue.id}: KI-Modus, aber KI global deaktiviert")
+      log(:info, "##{issue.id}: AI mode, but AI disabled globally")
       return nil
     end
 
     client = RedmineExpertHelpdesk::AiClient.new(settings)
     unless client.configured?
-      log(:warn, "##{issue.id}: KI-Modus, aber KI nicht konfiguriert")
+      log(:warn, "##{issue.id}: AI mode, but AI not configured")
       return nil
     end
 
     if text.blank? && subject.blank?
-      log(:debug, "##{issue.id}: kein auswertbarer Text")
+      log(:debug, "##{issue.id}: no evaluable text")
       return nil
     end
 
@@ -144,7 +144,7 @@ class HelpdeskCompletenessJob < ActiveJob::Base
     RedmineExpertHelpdesk::CompletenessCheck.parse_ai_verdict(raw)
   rescue RedmineExpertHelpdesk::AiClient::AiError => e
     # Fail closed: without a dependable verdict no mail goes to the customer.
-    log(:warn, "##{issue.id}: KI-Aufruf fehlgeschlagen, keine Rueckfrage: #{e.message}")
+    log(:warn, "##{issue.id}: AI call failed, no follow-up: #{e.message}")
     nil
   end
 
@@ -154,11 +154,11 @@ class HelpdeskCompletenessJob < ActiveJob::Base
   # senders an admin already knows, and the headers catch the ones nobody has
   # entered anywhere yet.
   def automated_sender_reason(setting, contact, message)
-    return "Kunde abgewaehlt: #{contact.email}" if contact.info_request_opt_out?
+    return "customer opted out: #{contact.email}" if contact.info_request_opt_out?
 
     entries = RedmineExpertHelpdesk::AutomatedMail.parse_list(setting.info_request_sender_blacklist)
     if entries.any? && RedmineExpertHelpdesk::AutomatedMail.list_matches?(entries, contact.email)
-      return "Absender-Blacklist: #{contact.email}"
+      return "sender blacklist: #{contact.email}"
     end
 
     header_trigger(message)
@@ -175,7 +175,7 @@ class HelpdeskCompletenessJob < ActiveJob::Base
     RedmineExpertHelpdesk::AutomatedMail.trigger(msg)
   rescue StandardError => e
     # Unreadable .eml => decide on the sender list alone; never block the check.
-    log(:warn, "Header-Pruefung fehlgeschlagen: #{e.message}")
+    log(:warn, "header check failed: #{e.message}")
     nil
   end
 
@@ -189,7 +189,7 @@ class HelpdeskCompletenessJob < ActiveJob::Base
       eml = message&.eml_attachment
       Mail.read(eml.diskfile) if eml && eml.diskfile && File.exist?(eml.diskfile)
     rescue StandardError => e
-      log(:warn, ".eml konnte nicht gelesen werden: #{e.message}")
+      log(:warn, ".eml could not be read: #{e.message}")
       nil
     end
   end
@@ -213,7 +213,7 @@ class HelpdeskCompletenessJob < ActiveJob::Base
     subject = mail&.subject.to_s.strip
     subject.present? ? subject : issue.subject.to_s.strip
   rescue StandardError => e
-    log(:warn, ".eml-Betreff konnte nicht gelesen werden: #{e.message}")
+    log(:warn, ".eml subject could not be read: #{e.message}")
     issue.subject.to_s.strip
   end
 
@@ -230,7 +230,7 @@ class HelpdeskCompletenessJob < ActiveJob::Base
       mail.body.decoded.to_s
     end
   rescue StandardError => e
-    log(:warn, ".eml-Text konnte nicht gelesen werden: #{e.message}")
+    log(:warn, ".eml text could not be read: #{e.message}")
     nil
   end
 
@@ -256,22 +256,22 @@ class HelpdeskCompletenessJob < ActiveJob::Base
     # happily write it.
     status = IssueStatus.find_by(:id => status_id)
     if status.nil?
-      return log(:warn, "##{issue.id}: konfigurierter Status #{status_id} existiert nicht mehr")
+      return log(:warn, "##{issue.id}: configured status #{status_id} no longer exists")
     end
 
     # An automatic follow-up must never close a ticket: every SLA reader treats
     # closed_on as both reaction-done and solution-done, so closing here would
     # silently mark both clocks met while the customer has not even answered yet.
     if status.is_closed?
-      return log(:warn, "##{issue.id}: Status #{status.name} ist ein Abschluss-Status - " \
-                        "eine automatische Rueckfrage darf das Ticket nicht schliessen")
+      return log(:warn, "##{issue.id}: status #{status.name} is a closing status - " \
+                        "an automatic follow-up must not close the ticket")
     end
 
     issue.reload
     issue.status_id = status_id
     issue.save(:validate => false)
   rescue StandardError => e
-    log(:warn, "##{issue.id}: Status konnte nicht gesetzt werden: #{e.message}")
+    log(:warn, "##{issue.id}: status could not be set: #{e.message}")
   end
 
   def log(level, message)

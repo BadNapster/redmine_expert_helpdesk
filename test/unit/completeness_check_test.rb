@@ -122,14 +122,14 @@ class CompletenessCheckTest < ActiveSupport::TestCase
   def test_inventory_lists_name_and_type
     inv = Check.attachment_inventory([FakeAttachment.new('fehler.png', 'image/png', 400 * 1024),
                                       FakeAttachment.new('log.txt', 'text/plain', 900)])
-    assert_includes inv, 'Anhaenge dieser Mail:'
+    assert_includes inv, 'Вложения этого письма:'
     assert_includes inv, 'fehler.png (image/png)'
     assert_includes inv, 'log.txt (text/plain)'
   end
 
   def test_inventory_says_none_when_empty
-    assert_includes Check.attachment_inventory([]), 'keine'
-    assert_includes Check.attachment_inventory(nil), 'keine'
+    assert_includes Check.attachment_inventory([]), 'нет'
+    assert_includes Check.attachment_inventory(nil), 'нет'
   end
 
   def test_inventory_omits_missing_content_type
@@ -147,17 +147,17 @@ class CompletenessCheckTest < ActiveSupport::TestCase
 
   # The prompt promises this section - without it the instruction goes nowhere.
   def test_default_prompt_and_inventory_agree_on_the_marker
-    assert_includes Check::DEFAULT_AI_PROMPT, 'Anhaenge dieser Mail:'
-    assert_includes Check.attachment_inventory([]), 'Anhaenge dieser Mail:'
+    assert_includes Check::DEFAULT_AI_PROMPT, 'Вложения этого письма:'
+    assert_includes Check.attachment_inventory([]), 'Вложения этого письма:'
   end
 
   # Screenshot for software, photo for hardware - the prompt must state both.
   def test_default_prompt_asks_for_screenshot_and_photo
     prompt = Check::DEFAULT_AI_PROMPT
-    assert_includes prompt, 'SCREENSHOT'
-    assert_includes prompt, 'SOFTWARE'
-    assert_includes prompt, 'FOTO'
-    assert_includes prompt, 'HARDWARE'
+    assert_includes prompt, 'СКРИНШОТ'
+    assert_includes prompt, 'ПРОГРАММНОМ ОБЕСПЕЧЕНИИ'
+    assert_includes prompt, 'ФОТО'
+    assert_includes prompt, 'ОБОРУДОВАНИИ'
   end
 
   # --- The subject line is part of the message ---
@@ -202,15 +202,15 @@ class CompletenessCheckTest < ActiveSupport::TestCase
   def test_ai_input_puts_subject_first_and_inventory_last
     input = Check.ai_input(:text => 'a' * 50, :subject => ' Drucker kaputt ',
                            :attachments => [png(200)], :max_chars => 10)
-    assert input.start_with?("Betreff: Drucker kaputt\n\n#{'a' * 10}"), input
+    assert input.start_with?("Тема: Drucker kaputt\n\n#{'a' * 10}"), input
     assert_not_includes input, 'a' * 11
-    assert input.end_with?('Anhaenge dieser Mail: bild.png (image/png)'), input
+    assert input.end_with?('Вложения этого письма: bild.png (image/png)'), input
   end
 
   def test_ai_input_omits_blank_subject
     input = Check.ai_input(:text => 'body', :subject => '  ')
     assert input.start_with?('body'), input
-    assert_not_includes input, 'Betreff:'
+    assert_not_includes input, 'Тема:'
   end
 
   # Settings arrive as strings; the limit must not depend on the caller's type.
@@ -227,8 +227,8 @@ class CompletenessCheckTest < ActiveSupport::TestCase
 
   # The job labels the subject with this marker - the prompt must explain it.
   def test_default_prompt_mentions_the_subject
-    assert_includes Check::DEFAULT_AI_PROMPT, 'Betreff:'
-    assert Check.ai_input(:text => 'x', :subject => 'y').start_with?('Betreff:')
+    assert_includes Check::DEFAULT_AI_PROMPT, 'Тема:'
+    assert Check.ai_input(:text => 'x', :subject => 'y').start_with?('Тема:')
   end
 
   # --- Images too small to be a screenshot/photo do not count ---
@@ -287,7 +287,7 @@ class CompletenessCheckTest < ActiveSupport::TestCase
   end
 
   def test_inventory_says_none_when_only_logos_are_attached
-    assert_includes Check.attachment_inventory([png(2)]), 'keine'
+    assert_includes Check.attachment_inventory([png(2)]), 'нет'
   end
 
   # --- AI answer ---

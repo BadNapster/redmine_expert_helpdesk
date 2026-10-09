@@ -1,6 +1,6 @@
-# Automatisierungsregel eines Postfachs.
-# Bedingung (Feld/Operator/Wert) wird gegen Betreff oder Absender geprueft,
-# die Aktion setzt Ticketfelder oder verwirft die Mail ("ignore").
+# A mailbox's automation rule.
+# The condition (field/operator/value) is checked against subject or sender;
+# the action sets ticket fields or discards the mail ("ignore").
 class HelpdeskRule < HelpdeskApplicationRecord
   include Redmine::SafeAttributes
 
@@ -36,7 +36,7 @@ class HelpdeskRule < HelpdeskApplicationRecord
     end
   end
 
-  # Wendet die Aktion auf das Ticket an. Liefert true, wenn etwas geaendert wurde.
+  # Applies the action to the ticket. Returns true when something changed.
   def apply_to(issue)
     case action_type
     when 'set_priority'

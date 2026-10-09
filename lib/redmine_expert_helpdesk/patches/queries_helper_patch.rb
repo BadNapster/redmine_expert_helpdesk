@@ -1,14 +1,14 @@
-# Rendert die SLA-Grid-Spalten (Reaktion/Loesung) als farbige Ampel-Chips,
-# wiederverwendet die hd-sla-*-Styles aus helpdesk_activity.css (auf jeder Seite
-# via view_layouts_base_html_head eingebunden). Andere Spalten unveraendert.
+# Renders the SLA grid columns (reaction/solution) as colored traffic-light chips,
+# reusing the hd-sla-* styles from helpdesk_activity.css (included on every page
+# via view_layouts_base_html_head). Other columns unchanged.
 #
-# Bewusst per UnboundMethod-Capture statt prepend/super (analog
-# ProjectsHelperPatch): so koexistiert column_content mit Plugins, die es per
-# alias_method_chain patchen (z. B. RedmineUP redmine_contacts_helpdesk).
-# prepend+super kollidiert dort ("super: no superclass method 'column_content'"),
-# weil deren alias_method die prepend-Methode einfaengt und der bare super dann
-# ins Leere laeuft. Der explizite Aufruf der gecachten Original-Methode ist gegen
-# Reihenfolge und Verkettung unempfindlich.
+# Deliberately via UnboundMethod capture instead of prepend/super (analogous to
+# ProjectsHelperPatch): this lets column_content coexist with plugins that patch it via
+# alias_method_chain (e.g. RedmineUP redmine_contacts_helpdesk).
+# prepend+super collides there ("super: no superclass method 'column_content'"),
+# because their alias_method captures the prepended method and the bare super then
+# resolves to nothing. The explicit call of the cached original method is
+# insensitive to ordering and chaining.
 module RedmineExpertHelpdesk
   module Patches
     module QueriesHelperPatch

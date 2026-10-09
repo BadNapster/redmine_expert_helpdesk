@@ -1,5 +1,5 @@
-# Projekt-spezifische Helpdesk-Einstellungen (eine Zeile pro Projekt).
-# Wird bei Bedarf per find_or_initialize_by angelegt; Defaults kommen aus der Migration.
+# Project-specific helpdesk settings (one row per project).
+# Created on demand via find_or_initialize_by; defaults come from the migration.
 class HelpdeskProjectSetting < HelpdeskApplicationRecord
   belongs_to :project
   belongs_to :reply_status, :class_name => 'IssueStatus', :optional => true
@@ -11,16 +11,16 @@ class HelpdeskProjectSetting < HelpdeskApplicationRecord
 
   DEFAULT_SUBJECT_TEMPLATE = 'Re: [#{{issue.id}}] {{issue.subject}}'.freeze
 
-  # Aktion bei Phishing-Treffer: Links neutralisieren oder Mail in Quarantaene
+  # Action on a phishing hit: neutralize links or quarantine the mail
   PHISHING_ACTIONS = %w[neutralize quarantine].freeze
 
-  # KI-Zusammenfassung: Umfang (nur Erstmail vs. auch Journal-Antworten) und
-  # wie der Projekt-Prompt mit dem zentralen Default-Prompt kombiniert wird.
+  # AI summary: scope (first mail only vs. also journal replies) and
+  # how the project prompt is combined with the central default prompt.
   AI_SCOPES       = %w[initial initial_and_replies].freeze
   AI_PROMPT_MODES = %w[inherit extend override].freeze
 
-  # Wissensbasis (RAG): traegt das Projekt geloeste Tickets bei (off/auto/manual)
-  # und wo werden Loesungsvorschlaege angezeigt (off/summary/sidebar/both)?
+  # Knowledge base (RAG): does the project contribute solved tickets (off/auto/manual)
+  # and where are solution proposals shown (off/summary/sidebar/both)?
   KB_INGEST_MODES  = %w[off auto manual].freeze
   KB_DISPLAY_MODES = %w[off summary sidebar both].freeze
 
@@ -98,7 +98,7 @@ class HelpdeskProjectSetting < HelpdeskApplicationRecord
     raise ArgumentError, I18n.t(:error_helpdesk_ai_answer_min_score_invalid)
   end
 
-  # ISO-Wochentage (Mo=1..So=7) als Integer-Array
+  # ISO weekdays (Mon=1..Sun=7) as an integer array
   def sla_work_days_array
     sla_work_days.to_s.split(',').map(&:to_i).select { |d| (1..7).cover?(d) }
   end
@@ -120,12 +120,12 @@ class HelpdeskProjectSetting < HelpdeskApplicationRecord
     project&.assignable_users&.detect { |p| p.id == default_assigned_to_id }
   end
 
-  # KI-Zusammenfassung auch fuer Journal-Antworten (nicht nur die Erstmail)?
+  # AI summary also for journal replies (not just the first mail)?
   def ai_summary_for_replies?
     ai_summary_scope == 'initial_and_replies'
   end
 
-  # --- Wissensbasis (RAG) ---
+  # --- Knowledge base (RAG) ---
   def kb_ingest_auto?
     kb_ingest_mode == 'auto'
   end
@@ -163,10 +163,10 @@ class HelpdeskProjectSetting < HelpdeskApplicationRecord
     )
   end
 
-  # --- KI-Antwortvorschlag (kundengerichtet) ---
+  # --- AI answer draft (customer-facing) ---
 
-  # Guard auf die Spalte: das Modell wird auch geladen, bevor Migration 052
-  # gelaufen ist (Redmine migriert Plugins nach dem Boot).
+  # Guard on the column: the model is also loaded before migration 052 has run
+  # (Redmine migrates plugins after boot).
   def ai_answer_enabled?
     return false unless self.class.column_names.include?('ai_answer_enabled')
 
@@ -217,8 +217,8 @@ class HelpdeskProjectSetting < HelpdeskApplicationRecord
     )
   end
 
-  # Effektiver Prompt: erben (zentraler Default), erweitern (zentral + Projekt)
-  # oder ersetzen (nur Projekt). Analog zu HelpdeskMailbox#effective_footer_template.
+  # Effective prompt: inherit (central default), extend (central + project) or
+  # override (project only). Analogous to HelpdeskMailbox#effective_footer_template.
   def effective_ai_prompt
     combine_prompts(
       Setting.plugin_redmine_expert_helpdesk['ai_prompt'].to_s,
@@ -227,10 +227,10 @@ class HelpdeskProjectSetting < HelpdeskApplicationRecord
     )
   end
 
-  # Ab welcher Aehnlichkeit ein Wissensbasis-Treffer einen kundengerichteten
-  # Entwurf tragen darf: Projektwert, sonst zentraler Wert, sonst der Default
-  # des Drafters. Bewusst unabhaengig von kb_min_score - der steuert die
-  # Vorschlaege *an die Bearbeiter*, dieser hier Text *an den Kunden*.
+  # From what similarity a knowledge-base hit may carry a customer-facing draft:
+  # project value, else central value, else the drafter's default. Deliberately
+  # independent of kb_min_score - that one governs the proposals *to the agents*,
+  # this text *to the customer*.
   def effective_ai_answer_min_score
     return ai_answer_min_score.to_f.clamp(0.0, 1.0) if has_own_ai_answer_min_score?
 
@@ -308,7 +308,7 @@ class HelpdeskProjectSetting < HelpdeskApplicationRecord
       !blacklist_max_kb.nil? && blacklist_max_kb.to_i >= 0
   end
 
-  # Wie effective_ai_prompt, aber fuer den kundengerichteten Antwortentwurf.
+  # Like effective_ai_prompt, but for the customer-facing answer draft.
   def effective_ai_answer_prompt
     combine_prompts(
       Setting.plugin_redmine_expert_helpdesk['ai_answer_prompt'].to_s,

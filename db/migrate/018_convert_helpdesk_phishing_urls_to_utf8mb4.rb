@@ -1,7 +1,7 @@
-# PhishTank-URLs enthalten 4-Byte-UTF-8-Zeichen (Homoglyphen-Domains wie
-# mathematische Buchstaben, ein gaengiger Phishing-Trick). Redmines
-# Standard-Charset utf8mb3 kann diese nicht speichern (Mysql2::Error:
-# Incorrect string value) – Tabelle auf utf8mb4 konvertieren.
+# PhishTank URLs contain 4-byte UTF-8 characters (homoglyph domains such as
+# mathematical letters, a common phishing trick). Redmine's
+# standard charset utf8mb3 cannot store these (Mysql2::Error:
+# Incorrect string value) – convert the table to utf8mb4.
 class ConvertHelpdeskPhishingUrlsToUtf8mb4 < ActiveRecord::Migration[6.1]
   def up
     return unless ActiveRecord::Base.connection.adapter_name =~ /mysql/i
@@ -10,6 +10,6 @@ class ConvertHelpdeskPhishingUrlsToUtf8mb4 < ActiveRecord::Migration[6.1]
   end
 
   def down
-    # Keine Rueckkonvertierung: utf8mb4 ist abwaertskompatibel zu utf8mb3
+    # No reverse conversion: utf8mb4 is downwards compatible with utf8mb3
   end
 end

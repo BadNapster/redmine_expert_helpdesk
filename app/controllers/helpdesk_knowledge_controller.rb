@@ -1,6 +1,6 @@
-# Manuelle Kuratierung der Wissensbasis aus der Ticket-Seitenleiste:
-#  - ingest:  geschlossenes Ticket manuell aufnehmen (force -> sofort approved)
-#  - approve: einen im manual-Modus erzeugten pending-Eintrag freigeben
+# Manual curation of the knowledge base from the ticket sidebar:
+#  - ingest:  manually ingest a closed ticket (force -> immediately approved)
+#  - approve: release a pending entry created in manual mode
 # Permission: send_helpdesk_reply (as before) or edit_helpdesk_kb (KB editor role).
 # The full list/edit UI lives in HelpdeskKbEntriesController ("Knowledge base" tab).
 class HelpdeskKnowledgeController < ApplicationController

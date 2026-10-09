@@ -1,5 +1,5 @@
-# SLA-Zielzeiten je Prioritaet (Override der Projekt-Defaults).
-# Leere Werte bedeuten: Projekt-Default gilt.
+# SLA target times per priority (overrides the project defaults).
+# Empty values mean: the project default applies.
 class CreateHelpdeskSlaPriorities < ActiveRecord::Migration[6.1]
   def change
     unless table_exists?(:helpdesk_sla_priorities)

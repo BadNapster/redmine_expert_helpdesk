@@ -1,9 +1,9 @@
-# Ein Protokolleintrag je KI-Aufruf (siehe Migration 033). Wird vom AiClient beim
-# summarize/embed geschrieben – bei Erfolg mit Token/Dauer, bei Fehler mit
-# error_class/http_status. Backing-Tabelle der projektbezogenen KI-Statistik
+# One log entry per AI call (see migration 033). Written by the AiClient on
+# summarize/embed – on success with tokens/duration, on error with
+# error_class/http_status. Backing table of the project-scoped AI statistics
 # (RedmineExpertHelpdesk::AiUsageStatistics).
 class HelpdeskAiRequest < HelpdeskApplicationRecord
-  # Nur created_at (kein updated_at) – Protokolleintrag ist unveraenderlich.
+  # created_at only (no updated_at) – the log entry is immutable.
   self.record_timestamps = false
 
   REQUEST_TYPES = %w[summary completeness kb_extract kb_embed kb_retrieve kb_rerank answer_draft].freeze

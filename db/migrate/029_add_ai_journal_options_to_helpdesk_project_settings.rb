@@ -1,8 +1,8 @@
-# Weitere pro-Projekt-Optionen fuer die KI-Zusammenfassung:
-#  - ai_include_journal:        kompletten Ticketverlauf (Beschreibung + Notizen)
-#                               statt nur der ausloesenden Mail an die KI geben
-#  - ai_include_private_notes:  dabei auch private Notizen einbeziehen (nur wirksam,
-#                               wenn ai_include_journal aktiv ist)
+# Further per-project options for the AI summary:
+#  - ai_include_journal:        give the AI the full ticket history (description + notes)
+#                               instead of only the triggering mail
+#  - ai_include_private_notes:  also include private notes (only effective
+#                               when ai_include_journal is active)
 class AddAiJournalOptionsToHelpdeskProjectSettings < ActiveRecord::Migration[6.1]
   def change
     change_table :helpdesk_project_settings, :bulk => true do |t|

@@ -1,0 +1,867 @@
+ru:
+  label_helpdesk: Helpdesk
+  # Отдельные отображаемые названия, чтобы модуль/вкладка не конфликтовали
+  # с RedmineUP redmine_contacts_helpdesk (там тоже "Helpdesk").
+  label_expert_helpdesk: expert Helpdesk
+  project_module_helpdesk: expert Helpdesk
+  permission_manage_helpdesk: Управлять почтовыми ящиками хелпдеска
+  permission_fetch_helpdesk_mail: Получать почту хелпдеска
+  permission_send_helpdesk_reply: Отправлять ответы клиентам
+  permission_view_helpdesk_info: Просматривать информацию о клиентах
+
+  label_helpdesk_tenant_id: Tenant-ID (идентификатор каталога)
+  label_helpdesk_client_id: Client-ID (идентификатор приложения)
+  label_helpdesk_client_secret: Client-Secret
+  label_helpdesk_fetch_api_key: API-ключ для глобального получения почты
+  label_helpdesk_sla_api_key: API-ключ для проверки SLA
+  label_helpdesk_azure_hints: Подсказки по регистрации приложения в Azure
+  text_helpdesk_fetch_api_key_info: Защищает конечную точку /helpdesk/fetch_all. Пусто = конечная точка отключена.
+  text_helpdesk_sla_api_key_info: Защищает конечную точку /helpdesk/sla_check. Пусто = конечная точка отключена.
+
+  label_helpdesk_mailbox_new: Новый почтовый ящик
+  label_helpdesk_mailbox_edit: Изменить почтовый ящик
+  field_helpdesk_mailbox_address: Адрес почтового ящика
+  field_helpdesk_source_folder: Исходная папка
+  field_helpdesk_processed_folder: Папка назначения (обработанные)
+  field_helpdesk_skipped_folder: Папка назначения (пропущенные)
+  field_helpdesk_failed_folder: Папка назначения (ошибки)
+  field_helpdesk_sent_folder: Папка для отправленных писем
+  field_helpdesk_enabled: Активен
+  field_helpdesk_last_fetched_at: Последнее получение
+  field_helpdesk_last_error: Последняя ошибка
+  field_helpdesk_unknown_user_mode: Неизвестные отправители
+  field_helpdesk_suppress_notifications: Подавлять уведомления Redmine
+  text_helpdesk_processed_folder_info: "Обработанные письма перемещаются в эту папку. Пусто = письма остаются в исходной папке (внимание: возможна повторная обработка)."
+  text_helpdesk_skipped_folder_info: Пропущенные письма (черный список, правила игнорирования, фильтр автоответов) помещаются сюда. Пусто = та же папка, что и «Обработанные».
+  text_helpdesk_failed_folder_info: Письма, при обработке которых произошла ошибка, помещаются сюда. Пусто = та же папка, что и «Обработанные».
+  text_helpdesk_suppress_notifications_info: Предотвращает дублирование писем клиентам, когда активен автоответчик.
+
+  # --- Почтовый провайдер (IMAP/SMTP) ----------------------------------------
+  field_helpdesk_provider: Почтовый провайдер
+  label_helpdesk_provider_graph: "Microsoft 365 (Graph API)"
+  label_helpdesk_provider_imap: "IMAP / SMTP"
+  text_helpdesk_provider_info: "Graph использует центральную регистрацию приложения в Azure. IMAP/SMTP работает с Google Workspace, Exchange On-Premises, самостоятельно размещенными серверами (Dovecot, Zimbra) и любыми хостинг-провайдерами."
+  field_helpdesk_credentials_source: Учетные данные
+  label_helpdesk_credentials_global: Из настроек плагина
+  label_helpdesk_credentials_mailbox: Индивидуально для этого ящика
+  text_helpdesk_credentials_source_info: "Почтовый ящик использует либо глобальные учетные данные, либо собственные — пустые поля никогда не заполняются из другого источника."
+  field_helpdesk_auth_method: Вход
+  label_helpdesk_auth_oauth2: "OAuth2 (рекомендуется)"
+  label_helpdesk_auth_password: Имя пользователя и пароль
+  text_helpdesk_auth_password_info: "Только для серверов без OAuth2. Microsoft 365 больше не принимает базовую аутентификацию."
+  field_helpdesk_oauth_grant: Процедура OAuth2
+  label_helpdesk_grant_client_credentials: "Только приложение (без согласия)"
+  label_helpdesk_grant_authorization_code: "Одноразовое согласие (refresh-токен)"
+  label_helpdesk_grant_jwt_bearer: "Служебная учетная запись (подписанная ассерция)"
+  field_helpdesk_oauth_preset: Шаблон
+  label_helpdesk_preset_microsoft: Microsoft 365
+  label_helpdesk_preset_google: Google Workspace / Gmail
+  label_helpdesk_preset_generic: Другое / самостоятельно размещенное
+  field_helpdesk_oauth_tenant_id: Tenant-ID
+  field_helpdesk_oauth_client_id: Client-ID
+  field_helpdesk_oauth_client_secret: Client-Secret
+  field_helpdesk_oauth_authorize_url: URL авторизации
+  field_helpdesk_oauth_token_url: URL токена
+  field_helpdesk_oauth_scope: Scope
+  field_helpdesk_oauth_sa_email: Адрес служебной учетной записи
+  field_helpdesk_oauth_sa_key: Ключ служебной учетной записи (PEM)
+  label_helpdesk_imap_settings: "Входящая почта (IMAP)"
+  label_helpdesk_smtp_settings: "Исходящая почта (SMTP)"
+  label_helpdesk_oauth_settings: Вход
+  field_helpdesk_imap_host: IMAP-сервер
+  field_helpdesk_imap_port: IMAP-порт
+  field_helpdesk_imap_security: IMAP-шифрование
+  field_helpdesk_imap_username: IMAP-пользователь
+  field_helpdesk_imap_verify_ssl: Проверять IMAP-сертификат
+  field_helpdesk_imap_unseen_only: Получать только непрочитанные письма
+  field_helpdesk_imap_timeout: Таймаут (секунды)
+  field_helpdesk_smtp_host: SMTP-сервер
+  field_helpdesk_smtp_port: SMTP-порт
+  field_helpdesk_smtp_security: SMTP-шифрование
+  field_helpdesk_smtp_username: SMTP-пользователь
+  field_helpdesk_smtp_verify_ssl: Проверять SMTP-сертификат
+  field_helpdesk_mail_password: Пароль
+  label_helpdesk_security_ssl: "SSL/TLS"
+  label_helpdesk_security_starttls: STARTTLS
+  label_helpdesk_security_plain: "Без шифрования (не рекомендуется)"
+  text_helpdesk_imap_username_info: "Пусто = используется адрес почтового ящика."
+  text_helpdesk_imap_unseen_only_info: "Для сред, в которых обработанные письма нельзя переместить в другую папку."
+  text_helpdesk_verify_ssl_info: "Отключайте только при самоподписанных сертификатах в доверенной сети."
+  text_helpdesk_secret_blank_info: "Оставьте пустым, чтобы сохранить сохраненное значение; введите «-», чтобы удалить его."
+  text_helpdesk_gmail_labels_info: "Gmail представляет папки как метки; перемещение письма изменяет его метку."
+  text_helpdesk_expunge_fallback_warning: "Серверы без поддержки MOVE и UIDPLUS при перемещении очищают всю исходную папку и при этом удаляют и другие письма, уже помеченные как удаленные."
+  label_helpdesk_oauth_connect: Подключить
+  label_helpdesk_oauth_reconnect: Подключить заново
+  label_helpdesk_oauth_connected_since: "Подключено с %{date}"
+  label_helpdesk_oauth_not_connected: Еще не подключено
+  label_helpdesk_oauth_callback_url: Callback-URL
+  text_helpdesk_oauth_callback_url_info: "Укажите именно этот URL как redirect URI у поставщика удостоверений."
+  label_helpdesk_test_connection: Проверить подключение
+  button_helpdesk_copy_error: Скопировать сообщение
+  notice_helpdesk_error_copied: Скопировано
+  label_helpdesk_default_mail_credentials: "Центральный доступ к почте (регистрация приложения)"
+  label_helpdesk_api_keys: "API-ключи для Cron-конечных точек"
+  label_helpdesk_logging: "Протоколирование"
+  label_helpdesk_ai_log_level: "Уровень логирования для диагностики ИИ"
+  text_helpdesk_ai_log_level_info: "Степень серьезности строк диагностики ИИ (длина ввода, решение о пропуске); 'off' отключает их. Строка пишется всегда: если Rails логирует на более высоком уровне (в продакшене по умолчанию info), она повышается до этого уровня и сохраняет свою степень серьезности в префиксе. Ошибки ИИ логируются всегда."
+  label_helpdesk_mail_log_level: "Уровень логирования для отправленных писем"
+  text_helpdesk_mail_log_level_info: "Каждое письмо, отправленное хелпдеском (ответ, первичное письмо, автоответчик, уведомление о SLA), логируется с указанием использованного канала доставки. Неудачные отправки всегда логируются как ошибки."
+  text_helpdesk_default_preset_info: "Определяет, какие поля ниже вообще нужны. Почтовые ящики с настройкой «Из настроек плагина» наследуют этот шаблон."
+  text_helpdesk_global_app_registration_info: "Одна регистрация на все: почтовые ящики Graph и IMAP/SMTP-ящики с OAuth2 используют ее совместно."
+  text_helpdesk_default_host_info: "Используется, когда почтовый ящик оставляет поле хоста пустым. Именованный шаблон всегда имеет приоритет."
+  text_helpdesk_default_oauth_urls_info: "Нужно только для самостоятельно размещенных серверов — Microsoft и Google предоставляют эти значения через свой шаблон."
+  label_helpdesk_transport_provider: "Backend почтового ящика (Graph или собственный SMTP-сервер)"
+  notice_helpdesk_connection_ok: Подключение выполнено успешно.
+  notice_helpdesk_oauth_connected: Почтовый ящик успешно подключен.
+  error_helpdesk_connection_failed: "Ошибка подключения: %{message}"
+  error_helpdesk_imap_auth_failed: Ошибка входа IMAP
+  error_helpdesk_smtp_auth_failed: Ошибка входа SMTP
+  error_helpdesk_imap_no_auth_mechanism: "Сервер отклоняет LOGIN и не предлагает ни PLAIN, ни LOGIN. Проверьте шифрование — многие серверы разрешают пароль только через TLS."
+  error_helpdesk_smtp_no_auth_mechanism: "Сервер не предлагает пригодного механизма пароля (PLAIN, LOGIN, CRAM-MD5). Проверьте шифрование."
+  error_helpdesk_oauth_state_invalid: Действительный запрос авторизации отсутствует или истек.
+  error_helpdesk_oauth_reauth_required: Доступ отозван — подключите почтовый ящик заново.
+  error_helpdesk_oauth_token_failed: Не удалось получить OAuth2-токен
+  error_helpdesk_oauth_no_refresh_token: "Поставщик удостоверений не вернул refresh-токен. Проверьте scope (Google требует access_type=offline)."
+  error_helpdesk_secret_undecryptable: "Сохраненный секрет не удается расшифровать — вероятно, изменился secret_key_base. Пожалуйста, введите его заново."
+  error_helpdesk_provider_not_configured: Почтовый провайдер настроен не полностью.
+  error_helpdesk_missing_parameters: Отсутствуют параметры.
+  error_helpdesk_access_denied: Доступ запрещен.
+  error_helpdesk_invalid_api_key: Неверный API-ключ.
+  button_helpdesk_load_folders: "Загрузить папки"
+  title_helpdesk_load_folders: "Загрузить список папок с почтового ящика"
+  label_helpdesk_show_folder_list: "Показать список папок"
+  label_helpdesk_create_folder: "создать"
+  label_helpdesk_error_prefix: "Ошибка:"
+  label_helpdesk_unknown_error: "неизвестно"
+  text_helpdesk_no_folders_loaded: "Папки ещё не загружены — используйте «%{button}»"
+  text_helpdesk_no_folders_present: "Папок нет"
+  text_helpdesk_loading_folders: "Загружаю папки…"
+  text_helpdesk_folders_loaded: "Загружено папок:"
+  text_helpdesk_creating_folders: "Создаю папки…"
+  text_helpdesk_confirm_create_folders: "Папки %{names} ещё не существуют. Создать их в почтовом ящике?"
+  error_helpdesk_network_error: "Сетевая ошибка"
+  error_helpdesk_folder_creation_failed: "Не удалось создать папку:"
+  text_helpdesk_azure_hint_graph: "Почтовые ящики Graph: разрешения приложения <code>Mail.ReadWrite</code>, <code>Mail.Send</code> (требуется согласие администратора)"
+  text_helpdesk_azure_hint_imap: "Почтовые ящики IMAP/SMTP (только приложение): <code>IMAP.AccessAsApp</code>, <code>SMTP.SendAsApp</code>"
+  text_helpdesk_azure_hint_policy: "Ограничьте доступ к почтовым ящикам helpdesk через <code>ApplicationAccessPolicy</code>"
+
+  label_helpdesk_reopen: Статус при ответе клиента
+  field_helpdesk_reopen_status: Статус (закрытая заявка)
+  text_helpdesk_reopen_status_info: Статус, который получает закрытая заявка при поступлении нового ответа клиента. Пусто = заявка остается закрытой.
+  field_helpdesk_open_reply_status: Статус (открытая заявка)
+  text_helpdesk_open_reply_status_info: Статус, который получает открытая заявка при поступлении нового ответа клиента. Пусто = статус не изменяется.
+  field_helpdesk_reopen_max_age_days: Макс. возраст (дни)
+  text_helpdesk_reopen_max_age_days_info: Если заявка старше этого количества дней (по последнему обновлению), вместо повторного открытия создается новая заявка. Пусто = без ограничения по возрасту.
+  label_helpdesk_defaults: Значения по умолчанию для новых заявок
+  label_helpdesk_unknown_user_accept: Принять (анонимно)
+  label_helpdesk_unknown_user_create: Создать учетную запись
+  label_helpdesk_unknown_user_ignore: Игнорировать
+
+  label_helpdesk_filter: Фильтр отправителей
+  field_helpdesk_allow_list: Белый список
+  field_helpdesk_deny_list: Черный список
+  text_helpdesk_allow_list_info: Один адрес или домен в строке. Если заполнен, разрешены только эти отправители.
+  text_helpdesk_deny_list_info: Один адрес или домен в строке. Письма этих отправителей отклоняются.
+
+  label_helpdesk_auto_reply_filter: Фильтр автоответов
+  field_helpdesk_auto_reply_filter_enabled: Фильтр автоответов активен
+  text_helpdesk_auto_reply_filter_info: "Распознавать и игнорировать автоматически созданные сообщения (автоответы об отсутствии, auto-reply) по распространенным почтовым заголовкам (auto-submitted, x-auto-response-suppress, x-autorespond, precedence: bulk/list/junk и т.д.)."
+  field_helpdesk_auto_reply_sender_whitelist: Исключения по отправителям
+  text_helpdesk_auto_reply_sender_whitelist_info: "Один адрес или домен в строке. Автоответы этих отправителей обрабатываются как обычно."
+  field_helpdesk_auto_reply_header_whitelist: Исключения по заголовкам
+  text_helpdesk_auto_reply_header_whitelist_info: "Одна пара «заголовок-значение» в строке (формат: \"Header-Name: Wert\" или \"Header-Name: *\"). Письма, содержащие один из этих заголовков, обрабатываются, несмотря на признаки автоответа."
+
+  label_helpdesk_autoresponder: Автоответчик
+  field_helpdesk_autoresponder_enabled: Автоответчик активен
+  field_helpdesk_autoresponder_subject: Тема
+  field_helpdesk_autoresponder_body: Текст
+  text_helpdesk_macros_info: 'Доступные макросы: {{issue.id}}, {{issue.subject}}, {{issue.url}}, {{issue.status}}, {{issue.priority}}, {{issue.tracker}}, {{issue.author}}, {{issue.assignee}}, {{issue.category}}, {{issue.version}}, {{issue.start_date}}, {{issue.due_date}}, {{issue.created_on}}, {{issue.updated_on}}, {{issue.done_ratio}}, {{issue.description}}, {{issue.parent_id}}, {{contact.name}}, {{contact.email}}, {{user.name}}, {{user.firstname}}, {{user.lastname}}, {{user.login}}, {{user.mail}}, {{project.name}}, {{project.identifier}}. Включенные пользовательские поля заявок доступны как {{issue.cf.<имя>}} или {{issue.cf.<id>}}. Старая запись ({{ticket_id}}, {{contact_name}}, ...) продолжает работать.'
+  field_helpdesk_smtp_from_address: 'Альтернативный отправитель (From)'
+  text_helpdesk_smtp_from_address_info: 'Необязательно. Пусто = отправка с адреса почтового ящика. Используется только при отправке через собственную SMTP-конфигурацию Redmine; Graph и собственный SMTP-сервер ящика аутентифицируются как этот ящик и отклоняют чужого отправителя. Релей должен иметь право отправлять для этого адреса (SPF/DMARC).'
+  field_helpdesk_smtp_reply_to_mailbox: 'Устанавливать Reply-To на адрес почтового ящика'
+  text_helpdesk_smtp_reply_to_mailbox_info: 'По умолчанию выключено. Оставляйте выключенным, если адрес отправителя и так доставляет в этот почтовый ящик — например, список рассылки, единственным участником которого является этот ящик; в таком случае Reply-To лишь раскроет внутренний адрес. Включайте, если письма на адрес отправителя не достигают этого ящика, иначе ответы клиентов не вернутся в заявку.'
+  error_helpdesk_invalid_from_address: 'не является допустимым адресом электронной почты'
+  label_helpdesk_macros: 'Макросы'
+  label_helpdesk_macros_more: 'дополнительные макросы'
+  label_helpdesk_macros_custom_fields: 'Пользовательские поля'
+  label_helpdesk_macro_name: 'Макрос'
+  label_helpdesk_macro_custom_fields: 'Пользовательские поля как макросы'
+  text_helpdesk_macro_custom_fields_info: 'Только выбранные здесь пользовательские поля заявок можно использовать как макрос {{issue.cf.*}}. Шаблоны отправляются клиентам, поэтому внутренние поля остаются заблокированными без разрешения. Дополнительно действует видимость поля в Redmine: что не видит отвечающий агент, остается пустым.'
+  text_helpdesk_macro_custom_fields_none: 'В этом Redmine не задано ни одного пользовательского поля заявок.'
+  note_helpdesk_autoresponder_sent: 'Автоматическое подтверждение отправлено на %{email}.'
+  label_helpdesk_message_plural: 'Сообщения хелпдеска'
+
+  label_helpdesk_phishtank: 'PhishTank (обнаружение фишинга)'
+  field_helpdesk_phishtank_enabled: 'Интеграция PhishTank активна'
+  field_helpdesk_phishtank_app_key: 'PhishTank App-Key (необязательно)'
+  field_helpdesk_phishtank_interval_hours: 'Интервал загрузки (часы)'
+  text_helpdesk_phishtank_info: 'Сверяет ссылки во входящих письмах с базой данных PhishTank. Проверку необходимо дополнительно включить для каждого проекта.'
+  text_helpdesk_phishtank_app_key_info: 'Без ключа используется анонимная конечная точка (более строгий rate limit).'
+  field_helpdesk_phishtank_feed_url: 'URL фида'
+  text_helpdesk_phishtank_feed_url_info: 'Плейсхолдер {key} заменяется на app-ключ; без ключа сегмент "/{key}" удаляется.'
+  text_helpdesk_phishtank_interval_info: 'Загрузка выполняется автоматически при получении почты (fetch_all), не чаще одного раза за интервал. Минимум: 1 час.'
+  field_helpdesk_phishing_database_enabled: 'Phishing.Database-фид активен'
+  field_helpdesk_phishing_database_feed_url: 'Phishing.Database feed-URL'
+  text_helpdesk_phishing_database_info: 'Дополнительный community-фид (github.com/Phishing-Database) с активными фишинговыми URL; ключ не требуется.'
+  text_helpdesk_phishing_source_status: 'Зеркало %{source}: %{count} URL, последний импорт: %{last_import}'
+  notice_helpdesk_phishing_sync_done: 'Синхронизация фишинговых фидов завершена: импортировано URL: %{summary}.'
+  error_helpdesk_phishing_sync_failed: 'Сбой синхронизации фишинговых фидов: %{message}'
+  field_helpdesk_phishing_check_enabled: 'Включить проверку на фишинг для этого проекта'
+  text_helpdesk_phishing_check_info: 'Ссылки во входящих письмах проверяются по зеркалу PhishTank (включая разрешение Microsoft SafeLinks).'
+  field_helpdesk_phishing_action: 'Действие при обнаружении фишинга'
+  label_helpdesk_phishing_action_neutralize: 'Нейтрализовать ссылки (заявка создается)'
+  label_helpdesk_phishing_action_quarantine: 'Поместить письмо в карантин (без заявки)'
+  note_helpdesk_phishing_links_removed: 'Внимание: из этого письма удалено %{count} известных фишинговых URL:'
+  text_helpdesk_phishing_link_removed: 'ССЫЛКА УДАЛЕНА – подозрение на фишинг (%{source})'
+  text_helpdesk_phishing_warning_banner: 'ПРЕДУПРЕЖДЕНИЕ: это письмо содержало известные фишинговые ссылки, которые были удалены. Не переходите по ссылкам и не вводите данные!'
+  text_helpdesk_phishing_suspicion_banner: 'ВНИМАНИЕ: это письмо содержит замаскированные ссылки (перенаправление, короткий URL или расхождение текста ссылки). Не переходите по ссылкам необдуманно!'
+  text_helpdesk_phishing_suspicion_redirect: 'ВНИМАНИЕ: ссылка-перенаправление — фактический адрес: %{target}'
+  text_helpdesk_phishing_suspicion_shortener: 'ВНИМАНИЕ: сервис коротких URL — фактический адрес не распознан'
+  text_helpdesk_phishing_suspicion_anchor: 'ВНИМАНИЕ: текст ссылки и адрес не совпадают (%{detail})'
+  note_helpdesk_phishing_suspicions: 'Внимание: в этом письме отмечено %{count} замаскированных ссылок:'
+  button_helpdesk_phishtank_sync: 'Скачать фишинговые фиды сейчас'
+  text_helpdesk_phishtank_sync_confirm: 'Загрузка может занять несколько минут. Продолжить?'
+  error_helpdesk_phishtank_disabled: 'Интеграция PhishTank отключена. Сначала включите и сохраните ее.'
+  label_helpdesk_legacy_import: 'Импорт из redmine_contacts'
+  text_helpdesk_legacy_import_info: 'В базе данных найдено %{count} контактов старого плагина redmine_contacts / redmine_contacts_helpdesk (таблицы contacts, contacts_projects, helpdesk_tickets). Импорт переносит контакты по проектам и связывает старые заявки через авторитетное сопоставление клиентов из helpdesk_tickets, чтобы карточка клиента появилась там. Уже корректные связи пропускаются, ошибочные синтетические связи предыдущих запусков исправляются.'
+  button_helpdesk_legacy_import: 'Импортировать контакты сейчас'
+  text_helpdesk_legacy_import_confirm: 'Импортировать контакты и связи заявок из redmine_contacts? Операция идемпотентна (можно безопасно повторять).'
+  notice_helpdesk_legacy_import_done: 'Импорт завершен: создано контактов: %{created}, уже существовало: %{existing}, связано заявок: %{links}, исправлено связей: %{repaired}, пропущено заявок: %{skipped}.'
+  error_helpdesk_legacy_import_no_data: 'Старые данные не найдены (таблица contacts отсутствует или пуста).'
+  error_helpdesk_legacy_import_failed: 'Ошибка импорта: %{message}'
+  label_helpdesk_legacy_import_select: 'Выберите проекты для импорта'
+  text_helpdesk_legacy_import_select_info: 'Выберите, из каких проектов импортировать старые контакты. Больше не используемые старые проекты можно оставить без выбора. Число в скобках — количество старых контактов этого проекта.'
+  label_helpdesk_legacy_select_all: 'Выбрать все'
+  label_helpdesk_legacy_no_project: '(без привязки к проекту)'
+  label_helpdesk_legacy_deleted_project: '(удаленный проект #%{id})'
+  label_helpdesk_legacy_with_issues: 'с заявками'
+  label_helpdesk_legacy_without_issues: 'без заявок'
+  error_helpdesk_legacy_import_no_selection: 'Выберите хотя бы один проект.'
+  text_helpdesk_legacy_fix_info: 'В базе данных %{count} вложений (оригинальные письма в формате EML) все еще прикреплены к старому контейнеру HelpdeskTicket и поэтому не видны на заявках. Исправление перевешивает их на соответствующую заявку и связывает как оригинальное письмо.'
+  button_helpdesk_legacy_fix: 'Исправить EML-вложения сейчас'
+  text_helpdesk_legacy_fix_confirm: 'Перевесить старые вложения на заявки? Операция идемпотентна (можно безопасно повторять).'
+  notice_helpdesk_legacy_fix_done: 'Исправление завершено: %{fixed} вложений перевешено, %{orphaned} осиротело (нет соответствующей заявки), %{linked} связей оригинальных писем установлено.'
+  error_helpdesk_legacy_fix_no_data: 'Старые вложения не найдены (container_type HelpdeskTicket).'
+  label_helpdesk_legacy_run_queued: 'В очереди — запуск начнется сейчас …'
+  label_helpdesk_legacy_run_running: 'Выполняется в фоновом режиме. Вы можете покинуть страницу; запуск продолжится.'
+  label_helpdesk_legacy_run_started: 'Запущено %{time} пользователем %{user}'
+  label_helpdesk_legacy_run_requested: 'Запрошено %{time} пользователем %{user}'
+  label_helpdesk_legacy_run_active_link: 'Запуск активен — показать статус'
+  label_helpdesk_legacy_run_last_link: 'Результат последнего запуска'
+  label_helpdesk_legacy_back_to_settings: 'К настройкам плагина'
+  label_helpdesk_legacy_phase_contacts: 'Контакты'
+  label_helpdesk_legacy_phase_issues: 'Связи заявок'
+  label_helpdesk_legacy_phase_attachments: 'Перевешивание вложений'
+  label_helpdesk_legacy_phase_messages: 'Связывание оригинальных писем'
+  label_helpdesk_legacy_attachments_select: 'EML-вложения: выберите проекты'
+  button_helpdesk_legacy_attachments: 'Управлять EML-вложениями'
+  text_helpdesk_legacy_attachments_select_info: 'Выберите проекты для обработки. «Исправить EML-вложения сейчас» перевешивает оригинальные письма, которые все еще висят на старой заявке redmine_contacts_helpdesk, на заявку Redmine, чтобы они были там видны. Оставьте без выбора проекты, которые все еще работают с RedmineUP-хелпдеском — он находит письмо только на своей заявке.'
+  text_helpdesk_legacy_restore_info: 'RedmineUP-хелпдеск установлен. «Вернуть в RedmineUP» отменяет исправление для выбранных проектов: каждое оригинальное письмо (message.eml) возвращается на свою заявку RedmineUP, чтобы RedmineUP-хелпдеск снова его показывал. Перемещаются только однозначные случаи — у заявки ровно одна заявка RedmineUP и одна message.eml, и к ней еще не прикреплено письмо. Ссылка «Оригинальное письмо» этого плагина работает в обоих случаях.'
+  text_helpdesk_legacy_restore_hint: 'Проекты, которые все еще используют RedmineUP-хелпдеск, могут получить свои оригинальные письма обратно после исправления.'
+  label_helpdesk_legacy_fixable_count: '%{count} к перевешиванию на заявку'
+  label_helpdesk_legacy_restorable_count: '%{count} для возврата в RedmineUP'
+  button_helpdesk_legacy_restore: 'Вернуть в RedmineUP'
+  text_helpdesk_legacy_restore_confirm: 'Вернуть оригинальные письма выбранных проектов на их заявки RedmineUP?'
+  notice_helpdesk_legacy_restore_done: 'Готово: %{restored} оригинальных писем возвращено на их заявки RedmineUP.'
+  error_helpdesk_legacy_restore_unavailable: 'RedmineUP-хелпдеск (redmine_contacts_helpdesk) не установлен — возвращать письма некуда.'
+  label_helpdesk_legacy_phase_restore: 'Возврат писем в RedmineUP'
+  notice_helpdesk_legacy_run_already_active: 'Уже выполняется запуск импорта или исправления. Показывается его статус.'
+  error_helpdesk_legacy_run_stale: 'Запуск не сообщал о ходе более часа и, вероятно, был прерван (например, перезапуском). Его можно безопасно запустить заново — импорт идемпотентен.'
+  label_helpdesk_contact_search: 'Поиск (имя, e-mail, компания)'
+  label_helpdesk_received_from: 'Получено от'
+  text_helpdesk_multi_recipients_hint: 'Разделяйте несколько адресов запятыми'
+  label_helpdesk_sent_to: 'Отправлено на'
+  label_helpdesk_sent_on: 'Отправлено'
+  label_helpdesk_recipients_to: 'Кому'
+  label_helpdesk_recipients_cc: 'Копия'
+  label_helpdesk_recipients_own_mailbox: 'этот почтовый ящик'
+
+  label_helpdesk_sla: 'SLA'
+  field_helpdesk_sla_enabled: 'SLA активен'
+  text_helpdesk_sla_enabled_info: 'Действует только для заявок, созданных после активации. Часы идут только в пределах рабочего времени.'
+  field_helpdesk_sla_reaction_minutes: 'Время реакции (минуты)'
+  field_helpdesk_sla_solution_minutes: 'Время решения (минуты)'
+  text_helpdesk_sla_minutes_info: 'Рабочие минуты (в пределах рабочего времени). Пусто = без цели.'
+  field_helpdesk_sla_work_days: 'Рабочие дни'
+  field_helpdesk_sla_work_hours: 'Рабочее время'
+  text_helpdesk_sla_work_hours_info: 'Формат ЧЧ:MM, например, с 08:00 до 17:00.'
+  label_helpdesk_sla_priorities: 'Целевое время по приоритетам (необязательно)'
+  text_helpdesk_sla_priorities_info: 'Пустые поля используют значения по умолчанию проекта.'
+  field_helpdesk_sla_notify_enabled: 'Уведомлять при превышении'
+  field_helpdesk_sla_notify_email: 'Эскалационный e-mail'
+  text_helpdesk_sla_notify_email_info: 'Дополнительный адрес (например, менеджер по эскалации); уведомляется при проверке SLA в цикле получения почты.'
+  field_helpdesk_sla_notify_user: 'Уведомлять пользователя'
+  label_helpdesk_sla_reaction: 'Реакция'
+  label_helpdesk_sla_solution: 'Решение'
+  label_helpdesk_sla_met: 'выполнено'
+  label_helpdesk_sla_running: 'выполняется'
+  label_helpdesk_sla_warning: 'Предупреждение'
+  label_helpdesk_sla_breached: 'превышено'
+  label_helpdesk_sla_breached_done: 'завершено, цель превышена'
+  label_helpdesk_sla_due_at: 'срок до %{time}'
+  label_helpdesk_sla_reaction_col: 'SLA реакция'
+  label_helpdesk_sla_solution_col: 'SLA решение'
+  label_helpdesk_awaiting_agent_col: 'Ожидает обработки'
+  label_helpdesk_awaiting_yes: 'Ожидает обработки'
+  label_helpdesk_awaiting_no: 'Отвечено'
+  label_helpdesk_awaiting_reply: 'Клиент ответил'
+  label_helpdesk_awaiting_reopen: 'Повторно открыто'
+  label_helpdesk_awaiting_count: '%{count} заявок ожидают обработки'
+  label_helpdesk_awaiting_show_all: 'Показать все'
+  field_helpdesk_awaiting_agent_enabled: 'Отмечать заявки, ожидающие обработки'
+  text_helpdesk_awaiting_agent_enabled_info: 'Помечает заявку, когда клиент отвечает по почте или когда закрытая заявка повторно открывается. Пометка снимается, как только сотрудник отвечает публично или закрывает заявку.'
+  label_helpdesk_inline_images: 'Встроенные изображения'
+  field_helpdesk_inline_images_enabled: 'Показывать встроенные изображения в заявке'
+  text_helpdesk_inline_images_enabled_info: 'Заменяет маркеры "[cid:...]", которые входящее письмо оставляет в тексте, самим изображением — заявка читается как оригинальное письмо. Изображения в любом случае сохраняются как вложения.'
+  label_helpdesk_sla_statistics: 'Статистика SLA'
+  permission_view_helpdesk_sla_statistics: 'Просматривать статистику SLA'
+  label_helpdesk_stats_group_by: 'Группировать по'
+  label_helpdesk_stats_range: 'Период'
+  label_helpdesk_stats_range_last_7_days: 'Последние 7 дней'
+  label_helpdesk_stats_range_last_30_days: 'Последние 30 дней'
+  label_helpdesk_stats_range_last_90_days: 'Последние 90 дней'
+  label_helpdesk_stats_range_last_6_months: 'Последние 6 месяцев'
+  label_helpdesk_stats_range_last_12_months: 'Последние 12 месяцев'
+  label_helpdesk_stats_range_last_5_years: 'Последние 5 лет'
+  label_helpdesk_stats_range_custom: 'Произвольный…'
+  label_helpdesk_stats_from: 'С'
+  label_helpdesk_stats_to: 'По'
+  label_helpdesk_stats_day: 'День'
+  label_helpdesk_stats_week: 'Неделя'
+  label_helpdesk_stats_month: 'Месяц'
+  label_helpdesk_stats_year: 'Год'
+  label_helpdesk_stats_no_data: 'Нет SLA-заявок за выбранный период.'
+  label_helpdesk_stats_tickets: 'Заявки'
+  label_helpdesk_stats_open: 'Открыто'
+  label_helpdesk_stats_closed: 'Закрыто'
+  label_helpdesk_stats_created: 'Создано'
+  label_helpdesk_stats_open_breached: 'Открыто с превышением'
+  label_helpdesk_stats_avg_first_response: 'Ø первая реакция'
+  label_helpdesk_stats_avg_resolution: 'Ø время решения'
+  label_helpdesk_stats_median: 'Медиана'
+  label_helpdesk_stats_compliance: 'Выполнение SLA'
+  label_helpdesk_stats_volume: 'Объем заявок'
+  label_helpdesk_stats_avg_over_time: 'Средние значения во времени'
+  label_helpdesk_stats_busiest_hours: 'Пиковые часы'
+  label_helpdesk_stats_busiest_weekdays: 'Пиковые дни недели'
+
+  # Статистика использования ИИ
+  label_helpdesk_ai_statistics: 'Статистика ИИ'
+  permission_view_helpdesk_ai_statistics: 'Просматривать статистику использования ИИ'
+  label_helpdesk_ai_stats_no_data: 'Нет ИИ-запросов за выбранный период.'
+  label_helpdesk_ai_stats_requests: 'ИИ-запросы'
+  label_helpdesk_ai_stats_total_tokens: 'Всего токенов'
+  label_helpdesk_ai_stats_input: 'Ввод'
+  label_helpdesk_ai_stats_output: 'Вывод'
+  label_helpdesk_ai_stats_success_rate: 'Доля успешных'
+  label_helpdesk_ai_stats_success: 'Успешно'
+  label_helpdesk_ai_stats_failed: 'С ошибкой'
+  label_helpdesk_ai_stats_avg_latency: 'Ø время ответа'
+  label_helpdesk_ai_stats_kb_requests: 'База знаний'
+  label_helpdesk_ai_stats_volume: 'Объем запросов'
+  label_helpdesk_ai_stats_tokens_over_time: 'Расход токенов во времени'
+  label_helpdesk_ai_stats_success_over_time: 'Успех / ошибки во времени'
+  label_helpdesk_ai_stats_errors: 'Ошибки'
+  label_helpdesk_ai_stats_by_type: 'По типу запроса'
+  label_helpdesk_ai_stats_by_model: 'По провайдеру / модели'
+  label_helpdesk_ai_stats_kb_status: 'Записи базы знаний'
+  label_helpdesk_ai_stats_kb_approved: 'Одобрено'
+  label_helpdesk_ai_stats_kb_pending: 'Ожидает'
+  label_helpdesk_ai_stats_kb_skipped: 'Пропущено'
+  label_helpdesk_ai_stats_type_summary: 'Сводка'
+  label_helpdesk_ai_stats_type_kb_extract: 'Извлечение в БЗ'
+  label_helpdesk_ai_stats_type_kb_embed: 'Эмбеддинг БЗ'
+  label_helpdesk_ai_stats_type_kb_retrieve: 'Поиск в БЗ'
+  label_helpdesk_ai_stats_type_kb_rerank: 'Реранжирование БЗ'
+  label_helpdesk_ai_stats_type_answer_draft: 'Черновик ответа'
+  mail_subject_helpdesk_sla_breach: 'SLA превышено'
+  mail_body_helpdesk_sla_breach: 'Для заявки #%{id} «%{subject}» превышено целевое время SLA:'
+
+  label_helpdesk_reply_header_footer: Верхний и нижний колонтитулы
+  field_helpdesk_reply_header: Верхний колонтитул
+  field_helpdesk_reply_footer: Нижний колонтитул
+  label_helpdesk_global_footer: 'Центральная подпись'
+  field_helpdesk_global_footer: 'Подпись (нижний колонтитул)'
+  text_helpdesk_global_footer_info: 'Добавляется к исходящим ответам клиентам и первичным письмам. Почтовые ящики могут переопределить ее или добавить собственную информацию (настройка «Режим колонтитула» на ящике).'
+  field_helpdesk_footer_mode: 'Режим колонтитула'
+  label_helpdesk_footer_mode_inherit: 'Использовать центральную подпись'
+  label_helpdesk_footer_mode_prepend: 'Вставлять колонтитул перед центральной подписью'
+  label_helpdesk_footer_mode_override: 'Использовать только колонтитул ящика'
+  text_helpdesk_footer_mode_info: 'Определяет, как колонтитул этого ящика комбинируется с центральной подписью (Администрирование → Плагины). Пока центральная подпись не задана, при настройке «Использовать центральную подпись» используется колонтитул ящика.'
+  label_helpdesk_footer_preview: 'Предпросмотр эффективного колонтитула'
+  text_helpdesk_footer_preview_info: 'Комбинация колонтитула ящика и центральной подписи согласно режиму колонтитула; макросы заменяются при отправке.'
+
+  # --- Цитаты и шаблоны ответов (панель инструментов поля заметки) -----------
+  label_helpdesk_quote: 'Цитировать'
+  label_helpdesk_quote_original_mail: 'Оригинальное письмо'
+  label_helpdesk_quote_conversation: 'Вся переписка'
+  label_helpdesk_quote_mail_conversation: 'Переписка по почте'
+  text_helpdesk_quote_wrote_on: '%{user} написал %{date}:'
+  text_helpdesk_quote_truncated: 'Переписка сокращена — вставлены не все записи.'
+  label_helpdesk_note_content_loading: 'Загрузка …'
+  error_helpdesk_note_content_failed: 'Ошибка вставки:'
+  error_helpdesk_note_content_unknown_source: 'Неизвестный источник содержимого заметки.'
+  error_helpdesk_note_content_empty: 'Вставлять нечего.'
+
+  # --- Черновик ответа с ИИ (панель инструментов поля заметки) ---------------
+  label_helpdesk_ai_answer: 'Ответ ИИ'
+  label_helpdesk_ai_answer_variant_standard: 'Составить ответ'
+  label_helpdesk_ai_answer_variant_steps: 'Пошаговая инструкция'
+  label_helpdesk_ai_answer_variant_short: 'Кратко и по делу'
+  label_helpdesk_ai_answer_variant_ask: 'Уточнить недостающие данные'
+  label_helpdesk_ai_answer_loading: 'ИИ составляет черновик ответа …'
+  label_helpdesk_ai_answer_sources: 'На основе:'
+  text_helpdesk_ai_answer_truncated: 'Черновик неполный (ограничение длины) — дополните перед отправкой.'
+  text_helpdesk_ai_answer_warning: 'Этот текст создан ИИ и будет отправлен клиенту. Проверьте его перед отправкой.'
+  text_helpdesk_ai_answer_confirm_unedited: 'Заметка все еще содержит неотредактированный черновик ИИ. Все равно отправить?'
+  error_helpdesk_ai_answer_unavailable: 'Черновики ответов ИИ не включены для этого проекта.'
+  error_helpdesk_ai_answer_no_contact: 'К этой заявке не привязан клиент — черновик ответа создать нельзя.'
+  error_helpdesk_ai_answer_kb_unavailable: 'База знаний выключена или не настроена — без нее черновик не создается. Используйте шаблон ответа или «Уточнить недостающие данные».'
+  error_helpdesk_ai_answer_no_grounding: 'Подходящая запись базы знаний не найдена — черновик не создан. Используйте шаблон ответа или «Уточнить недостающие данные».'
+  error_helpdesk_ai_answer_no_grounding_score: 'Нет достаточно похожей записи базы знаний (лучшее совпадение %{best} %, требуется %{needed} %) — черновик не создан. Используйте шаблон ответа или «Уточнить недостающие данные».'
+  error_helpdesk_ai_answer_min_score_invalid: 'Минимальное совпадение: введите число от 0 до 1 (например, 0,65).'
+  field_helpdesk_ai_answer_min_score: 'Минимальное совпадение (черновик)'
+  text_helpdesk_ai_answer_min_score_info: 'Насколько похожей должна быть запись базы знаний, чтобы на ее основе можно было составить черновик для клиента (от 0 до 1). Независимо от минимального совпадения базы знаний, которое управляет предложениями агентам. Чем выше значение, тем меньше, но лучше обоснованных черновиков.'
+  text_helpdesk_ai_answer_min_score_project_info: 'Оставьте пустым, чтобы использовать центральное значение. В проектах с пока небольшой базой знаний имеет смысл более высокое значение.'
+  error_helpdesk_ai_answer_store_unreachable: 'База знаний сейчас недоступна. Повторите попытку позже.'
+  error_helpdesk_ai_answer_timeout: 'ИИ не ответил вовремя. Повторите попытку.'
+  error_helpdesk_ai_answer_rate_limited: 'Квота ИИ исчерпана (rate limit). Повторите попытку через несколько минут.'
+  error_helpdesk_ai_answer_provider_down: 'Сервис ИИ сейчас недоступен. Повторите попытку позже.'
+  error_helpdesk_ai_answer_busy: 'ИИ-запрос уже выполняется. Подождите немного.'
+  error_helpdesk_ai_answer_failed: 'Не удалось создать черновик ответа.'
+  label_helpdesk_ai_answer_settings: 'Черновики ответов ИИ'
+  field_helpdesk_ai_answer_enabled_global: 'Включить черновики ответов ИИ'
+  text_helpdesk_ai_answer_enabled_global_info: 'Главный переключатель. Пока он выключен, ни один проект не предлагает кнопку. Требует настроенные ИИ-сводки, а для всех вариантов, кроме «Уточнить недостающие данные», — также базу знаний.'
+  field_helpdesk_ai_answer_enabled: 'Предлагать черновики ответов в этом проекте'
+  text_helpdesk_ai_answer_enabled_info: 'Добавляет рядом с цитированием и шаблонами кнопку «Ответ ИИ». Созданный текст адресован клиенту и вставляется в поле заметки — проверьте перед отправкой.'
+  field_helpdesk_ai_answer_prompt: 'Промпт для ответа'
+  text_helpdesk_ai_answer_prompt_info: 'Инструкция для черновика, адресованного клиенту. Внутренние заметки модели никогда не передаются.'
+  field_helpdesk_ai_answer_max_tokens: 'Макс. выходных токенов (черновик)'
+  text_helpdesk_ai_answer_max_tokens_info: 'Ответу нужно больше места, чем сводке; 900 — примерно экран текста.'
+  field_helpdesk_ai_answer_timeout: 'Таймаут (секунды, черновик)'
+  text_helpdesk_ai_answer_timeout_info: 'Этот вызов — в отличие от всех остальных ИИ-вызовов — выполняется синхронно в веб-запросе. Держите значительно ниже таймаута вышестоящего обратного прокси (5–45).'
+
+  label_helpdesk_reply_templates: 'Шаблоны ответов'
+  label_helpdesk_reply_templates_project: 'Шаблоны ответов проекта'
+  label_helpdesk_reply_templates_global: 'Глобальные шаблоны ответов'
+  label_helpdesk_reply_templates_empty: 'Шаблонов нет'
+  label_helpdesk_reply_templates_manage: 'Управлять шаблонами …'
+  label_helpdesk_reply_template_new: 'Новый шаблон ответа'
+  label_helpdesk_reply_template_edit: 'Изменить шаблон ответа'
+  label_helpdesk_reply_template_global_suffix: '(глобальный)'
+  field_helpdesk_reply_template_name: 'Название'
+  field_helpdesk_reply_template_content: 'Содержимое'
+  field_helpdesk_reply_template_position: 'Позиция'
+  field_helpdesk_reply_template_enabled: 'Активен'
+  text_helpdesk_reply_template_position_info: 'Определяет порядок в меню выбора.'
+  text_helpdesk_reply_template_enabled_info: 'В меню выбора появляются только активные шаблоны.'
+  text_helpdesk_reply_templates_info: 'Текстовые заготовки, которые сотрудники могут вставлять в поле заметки. Макросы заменяются при вставке с учетом текущей заявки, клиента и пользователя.'
+  text_helpdesk_reply_templates_global_info: 'Глобальные шаблоны предлагаются в каждом проекте хелпдеска дополнительно к его собственным.'
+  text_helpdesk_reply_templates_global_hint: 'Дополнительно в заявке предлагаются глобальные шаблоны из настроек плагина.'
+  error_helpdesk_reply_template_not_found: 'Этот шаблон ответа недоступен для данной заявки.'
+
+  label_helpdesk_rules: Правила автоматизации
+  label_helpdesk_rule_new: Новое правило
+  field_helpdesk_condition: Условие
+  field_helpdesk_action: Действие
+  field_helpdesk_condition_value: Значение
+  field_helpdesk_action_value: Значение действия
+  label_helpdesk_field_subject: Тема
+  label_helpdesk_field_sender: Отправитель
+  label_helpdesk_operator_contains: содержит
+  label_helpdesk_operator_equals: равно
+  label_helpdesk_operator_regex: соответствует регулярному выражению
+  label_helpdesk_action_set_priority: Установить приоритет
+  label_helpdesk_action_set_tracker: Установить трекер
+  label_helpdesk_action_set_category: Установить категорию
+  label_helpdesk_action_set_assignee: Назначить на
+  label_helpdesk_action_ignore: Игнорировать письмо
+
+  button_helpdesk_fetch: Получить почту сейчас
+  label_helpdesk_maintenance: "Режим обслуживания"
+  field_helpdesk_maintenance_mode: "Приостановить получение почты"
+  text_helpdesk_maintenance_mode_info: "Пока активен, ни один ящик не опрашивается: конечная точка cron /helpdesk/fetch_all и кнопка «Получить почту сейчас» в проекте ничего не делают, а уже запущенный опрос останавливается перед следующим сообщением. Необработанные письма остаются в ящике и забираются после выключения режима. Включайте перед обновлениями или перед масштабированием подов вниз."
+  label_helpdesk_maintenance_running: "Выполняющиеся опросы"
+  text_helpdesk_maintenance_idle: "Нет — сейчас ни одно письмо не обрабатывается."
+  text_helpdesk_maintenance_run_detail: "Обработано сообщений: %{processed}, выполняется с %{since}"
+  text_helpdesk_maintenance_api_info: "Переключается скриптом с помощью API-ключа получения почты (enabled=1 или 0). Ответ GET перечисляет еще выполняющиеся опросы всех подов; перед масштабированием дождитесь \"safe_to_stop\": true."
+  notice_helpdesk_maintenance_fetch_blocked: "Активен режим обслуживания — почта не получается. Выключите его в разделе Администрирование → Плагины → expert Helpdesk."
+  notice_helpdesk_fetch_done: "Получение почты завершено: обработано сообщений: %{count}."
+  error_helpdesk_fetch_failed: "Ошибка получения почты: %{message}"
+
+  label_helpdesk_customer: Клиент
+  label_helpdesk_customer_email: E-mail клиента
+  label_helpdesk_customers: Клиенты
+  label_helpdesk_edit_customer: Изменить клиента
+  label_helpdesk_email: Адрес E-mail
+  label_helpdesk_company: Компания
+  label_helpdesk_phone: Телефон
+  label_helpdesk_ticket_count: Заявки
+  label_helpdesk_last_ticket: Последняя заявка
+  label_helpdesk_all_tickets: Показать все заявки
+  permission_manage_helpdesk_contacts: Управлять списком клиентов
+  label_helpdesk_mailbox: Почтовый ящик
+  label_helpdesk_original_mail: Оригинальное письмо
+  label_helpdesk_previous_tickets: Предыдущие заявки
+  label_helpdesk_reply_to_customer: Ответ клиенту
+  label_helpdesk_send_as_mail: Отправить как e-mail клиенту
+  button_helpdesk_reply: Ответить
+  label_helpdesk_reply_to: "Кому"
+
+  label_helpdesk_reply_settings: Настройки ответов
+  label_helpdesk_send_reply_by_default: Отправлять ответы как e-mail по умолчанию
+  label_helpdesk_reply_subject_template: Шаблон темы
+  label_helpdesk_reply_status: "Статус при ответе"
+  text_helpdesk_reply_status_info: "Предвыбирается в поле статуса заявки, как только отмечен пункт «Отправить как e-mail клиенту». Это предложение, а не обязательство: самостоятельно выбранный статус сохраняется, и снятие галочки его больше не трогает. Исходный статус восстанавливается только до тех пор, пока вы не выбрали собственный. Пусто = без предвыбора."
+  label_helpdesk_default_assignee: "Назначать новые заявки на"
+  text_helpdesk_default_assignee_info: "Заявки, созданные из входящих писем, назначаются этому пользователю или группе. Подходящее правило почтового ящика имеет приоритет. Группы отображаются только при включенной в настройках Redmine опции «Разрешить назначение заявок группам»."
+  label_helpdesk_reply_assign_to_sender: "Назначать заявку мне при ответе, если она еще не назначена"
+  text_helpdesk_subject_template_hint: "Доступные макросы: {{issue.id}}, {{issue.subject}}, {{contact.name}}, {{contact.email}}, {{project.name}}"
+  label_helpdesk_mail_footer_preview: Предпросмотр подписи
+  label_helpdesk_reply_addresses_hint: "Разделяйте несколько адресов запятыми"
+  label_helpdesk_reply_attachments: "Вложения"
+  label_helpdesk_sent_attachments_count:
+    one: '%{count} вложение'
+    few: '%{count} вложения'
+    many: '%{count} вложений'
+    other: '%{count} вложений'
+  button_helpdesk_add_original_recipients: "Исходные получатели"
+  title_helpdesk_original_recipients: "Получатели исходного письма клиента"
+  field_helpdesk_reply_transport: "Канал доставки"
+  label_helpdesk_transport_graph: "Microsoft Graph API (Exchange)"
+  label_helpdesk_transport_smtp: "SMTP (стандарт Redmine)"
+  label_helpdesk_transport_mailbox_smtp: "Сам почтовый ящик (собственный SMTP-сервер)"
+  label_helpdesk_transport_mailbox_graph: "Сам почтовый ящик (Graph API)"
+  text_helpdesk_sent_folder_info: "Сюда помещается копия исходящих писем, чтобы ящик показывал обе половины переписки. Оставьте пустым, чтобы сервер сам назвал свою папку отправленных."
+  error_helpdesk_transport_not_available: "недоступен для этого ящика — Graph может отправлять только для ящика, размещенного в Microsoft 365, и только при настроенной центральной регистрации приложения"
+  warning_helpdesk_sent_append_failed: "Письмо отправлено, но копию в папке отправленных сохранить не удалось: %{message}"
+  text_helpdesk_reply_transport_info: "Backend ящика использует то, что настроено для самого ящика. Graph API предлагается для IMAP-ящика только если он размещен в Microsoft 365 (действует шаблон «Microsoft»), и требует настроенную центральную регистрацию приложения в Azure. SMTP использует SMTP-настройки из конфигурации Redmine и вообще не требует учетных данных почты на ящике — однако встроенные изображения встраиваются тогда как data-URI, а не как CID-вложения. Ответы, первичные письма и автоответчик следуют этой настройке."
+  button_helpdesk_send_reply: Отправить ответ
+  label_helpdesk_reply_placeholder: Введите текст ответа здесь …
+  notice_helpdesk_reply_sent: "Ответ отправлен на %{email}."
+  error_helpdesk_reply_failed: "Не удалось отправить ответ: %{message}"
+  error_helpdesk_no_recipient: Для этой заявки не найдено ни почтового ящика, ни контакта клиента.
+  warning_helpdesk_folder_create_failed: "Не удалось создать папку: %{message}"
+  error_helpdesk_empty_reply: Текст ответа не должен быть пустым.
+
+  label_helpdesk_display_settings: Настройки отображения
+  label_helpdesk_contacts_per_page: Записей на странице
+  text_helpdesk_contacts_per_page_info: "Число контактов на странице в списке клиентов (по умолчанию: 25)."
+  label_helpdesk_contact_ticket_limit: Макс. заявок в профиле клиента
+  text_helpdesk_contact_ticket_limit_info: "Число недавних заявок, показываемых в детальном просмотре клиента (по умолчанию: 10)."
+  label_helpdesk_showing_latest_n: Показываются %{n} последних из всего %{total} заявок.
+
+  # Первичное письмо / назначение контакта
+  label_helpdesk_send_initial_mail: Отправить как e-mail клиенту
+  label_helpdesk_contact_name_optional: Имя (необязательно)
+  label_helpdesk_initial_mail_body: Сообщение
+  label_helpdesk_initial_mail_body_hint: Оставьте пустым, чтобы использовать описание заявки
+  text_helpdesk_init_uses_description: Текст сообщения соответствует описанию заявки.
+  button_helpdesk_assign_contact: Назначить контакт
+  button_helpdesk_new_ticket: Новая заявка хелпдеска
+  label_helpdesk_assign_kunde: Назначить клиента
+  notice_helpdesk_init_mail_sent: Первичное письмо отправлено успешно.
+  notice_helpdesk_contact_assigned: Контакт клиента назначен заявке.
+  error_helpdesk_invalid_email: Недопустимый адрес e-mail.
+  error_helpdesk_no_mailbox: Нет активного почтового ящика.
+
+  # ИИ-сводки
+  label_helpdesk_ai_settings: 'ИИ-сводки'
+  field_helpdesk_ai_enabled: 'Включить ИИ-сводки'
+  text_helpdesk_ai_enabled_info: 'Главный переключатель. Сводку необходимо дополнительно включить для каждого проекта.'
+  field_helpdesk_ai_provider: 'Провайдер'
+  label_helpdesk_ai_provider_openai: 'OpenAI'
+  label_helpdesk_ai_provider_anthropic: 'Anthropic'
+  label_helpdesk_ai_provider_custom: 'Собственный (совместимый с OpenAI)'
+  field_helpdesk_ai_api_key: 'API-ключ'
+  field_helpdesk_ai_endpoint: 'Конечная точка (базовый URL)'
+  text_helpdesk_ai_endpoint_info: 'Пусто = значение провайдера по умолчанию. Обязательно для «Собственный» (совместимый с OpenAI URL, например, Ollama/vLLM/LocalAI/LM Studio).'
+  field_helpdesk_ai_model: 'Модель'
+  text_helpdesk_ai_model_info: 'Идентификатор модели. Для сводок достаточно быстрой, недорогой модели — например, OpenAI gpt-4o-mini или gpt-5-nano, Anthropic claude-haiku-4-5, или самостоятельно размещенной модели вроде llama3.1. Поддерживаются OpenAI GPT-5-/o-модели. Для изображений-вложений (vision) нужна модель с поддержкой vision (например, gpt-4o-mini, gpt-5-nano, claude-haiku-4-5). Для reasoning-моделей (серия GPT-5/o) значение «Макс. выходных токенов» не должно быть слишком низким.'
+  field_helpdesk_ai_prompt: 'Промпт'
+  text_helpdesk_ai_prompt_info: 'Центральная стандартная инструкция. Проекты могут расширять или заменять ее.'
+  field_helpdesk_ai_max_input_chars: 'Макс. вводимых символов'
+  field_helpdesk_ai_min_input_chars: 'Мин. вводимых символов'
+  text_helpdesk_ai_max_input_chars_info: 'Содержимое письма (и текст вложений) перед отправкой обрезается до этой длины.'
+  text_helpdesk_ai_min_input_chars_info: 'Более короткие письма не отправляются в ИИ; вместо этого оригинальный текст публикуется как заметка. 0 = всегда сводить.'
+  field_helpdesk_ai_max_output_tokens: 'Макс. выходных токенов'
+  field_helpdesk_ai_timeout: 'Таймаут (секунды)'
+  text_helpdesk_ai_privacy_info: 'Защита данных: содержимое входящих писем и выбранные вложения передаются настроенному провайдеру. Для полностью локальной работы используйте провайдера «Собственный» с самостоятельно размещенной конечной точкой.'
+  label_helpdesk_ai_summary: 'ИИ-сводка'
+  label_helpdesk_ai_summary_skipped: 'ИИ-сводка пропущена'
+  text_helpdesk_ai_skipped_short: 'Письмо короче настроенного минимума в %{min} символов, поэтому ИИ-сводка не создавалась — оригинальный текст выше говорит сам за себя.'
+  label_helpdesk_ai_assistant: 'ИИ-ассистент'
+  field_helpdesk_ai_summary_enabled: 'Создавать ИИ-сводки для этого проекта'
+  text_helpdesk_ai_summary_enabled_info: 'Добавляет заявкам из входящих писем частную заметку со сводкой.'
+  field_helpdesk_ai_scope: 'Охват'
+  label_helpdesk_ai_scope_initial: 'Только первичное письмо'
+  label_helpdesk_ai_scope_initial_and_replies: 'Первичное письмо и ответы'
+  field_helpdesk_ai_prompt_mode: 'Режим промпта'
+  label_helpdesk_ai_prompt_mode_inherit: 'Использовать центральный промпт'
+  label_helpdesk_ai_prompt_mode_extend: 'Расширять центральный промпт'
+  label_helpdesk_ai_prompt_mode_override: 'Заменять промптом проекта'
+  text_helpdesk_ai_prompt_mode_info: 'Определяет, как промпт проекта ниже комбинируется с центральным стандартным промптом.'
+  field_helpdesk_ai_attachments: 'Отправлять вложения в ИИ'
+  label_helpdesk_ai_attach_metadata: 'Имена файлов / метаданные'
+  label_helpdesk_ai_attach_text: 'Извлеченный текст (PDF, текстовые файлы)'
+  label_helpdesk_ai_attach_images: 'Изображения (нужна vision-модель)'
+  text_helpdesk_ai_attachments_info: 'Выберите, какая информация о вложениях включается во ввод для сводки. Изображения требуют модель с поддержкой vision.'
+  field_helpdesk_ai_min_image_kb: 'Минимальный размер изображений'
+  text_helpdesk_ai_min_image_kb_info: 'В КБ. Меньшие изображения не отправляются модели — логотипы подписей, иконки соцсетей и пиксели отслеживания есть почти в каждом письме, тратят токены впустую и вытесняют настоящий скриншот из бюджета изображений. Изображения меньше 64x64 пикселей тоже пропускаются. Касается только изображений; текст вложений и метаданные не затрагиваются. 0 отключает порог.'
+  field_helpdesk_ai_include_journal: 'Включать всю историю заявки'
+  text_helpdesk_ai_include_journal_info: 'Отправлять всю переписку (описание + все заметки) вместо только триггерного письма. Собственные заметки с ИИ-сводками исключаются.'
+  field_helpdesk_ai_include_private_notes: 'Включать также частные заметки'
+  text_helpdesk_ai_include_private_notes_info: 'Действует только при включенной полной истории. Внимание: частные (внутренние) заметки тогда тоже передаются провайдеру ИИ.'
+  label_helpdesk_ai_tokens: 'токенов'
+  label_helpdesk_ai_input_tokens: 'Ввод'
+  label_helpdesk_ai_output_tokens: 'Вывод'
+  button_helpdesk_ai_regenerate: 'Пересоздать ИИ-сводку'
+  text_helpdesk_ai_regenerate_info: 'Повторно составить сводку первичного письма этой заявки с помощью ИИ (создает новую частную заметку).'
+  notice_helpdesk_ai_regenerate_queued: 'ИИ-сводка создается и скоро появится.'
+  text_helpdesk_ai_not_configured: 'ИИ-сводки не включены/не настроены (см. Администрирование → Плагины).'
+
+  # База знаний (RAG)
+  label_helpdesk_kb_settings: 'База знаний (RAG)'
+  field_helpdesk_kb_enabled: 'Включить базу знаний'
+  text_helpdesk_kb_enabled_info: 'Главный переключатель. Для каждого проекта выбирается, вносит ли он решенные заявки и где появляются предложенные решения.'
+  field_helpdesk_kb_backend: 'Векторный магазин'
+  text_helpdesk_kb_backend_info: 'Qdrant (REST, без дополнительного gem) или Postgres + pgvector (требует gem pg в развертывании). Одно пространство имен на проект — строгая изоляция.'
+  field_helpdesk_kb_qdrant_url: 'Qdrant URL'
+  text_helpdesk_kb_qdrant_url_info: 'например, http://qdrant:6333 (при векторном магазине Qdrant).'
+  field_helpdesk_kb_qdrant_api_key: 'Qdrant API-ключ'
+  field_helpdesk_kb_pg_url: 'URL подключения pgvector'
+  text_helpdesk_kb_pg_url_info: 'например, postgres://user:pass@host:5432/db (при векторном магазине pgvector; требует gem pg).'
+  field_helpdesk_kb_embed_provider: 'Провайдер эмбеддингов'
+  field_helpdesk_kb_embed_model: 'Модель эмбеддингов'
+  field_helpdesk_kb_embed_endpoint: 'Конечная точка эмбеддингов'
+  text_helpdesk_kb_embed_endpoint_info: 'Пусто = значение провайдера по умолчанию. Обязательно для самостоятельно размещенной совместимой с OpenAI конечной точки (Ollama/vLLM/LocalAI).'
+  field_helpdesk_kb_embed_api_key: 'API-ключ эмбеддингов'
+  text_helpdesk_kb_embed_api_key_info: 'Пусто = используется ключ сводок, если используется тот же провайдер. (У Anthropic нет API эмбеддингов — используйте OpenAI или самостоятельно размещенную конечную точку.)'
+  field_helpdesk_kb_extract_prompt: 'Промпт извлечения'
+  text_helpdesk_kb_extract_prompt_info: 'Оставьте пустым, чтобы использовать встроенный промпт выбранной степени детализации (показывается серым). Собственный текст заменяет его для всех уровней и должен заставлять модель возвращать JSON.'
+  field_helpdesk_kb_extract_detail: 'Степень детализации'
+  label_helpdesk_kb_extract_detail_general: 'Общая'
+  label_helpdesk_kb_extract_detail_specific: 'Специфическая'
+  label_helpdesk_kb_extract_detail_most_specific: 'Максимально специфическая'
+  label_helpdesk_kb_extract_detail_central: 'Центральная настройка (%{level})'
+  text_helpdesk_kb_extract_detail_info: 'Сколько конкретных деталей сохраняют записи базы знаний. Общая: обобщенные проблема и решение. Специфическая: сохраняет названия приложений, версии, коды и тексты ошибок. Максимально специфическая: дополнительно пути, имена серверов и общих ресурсов, значения конфигурации и точный порядок шагов. На каждом уровне модели предписывается опускать пароли и персональные данные. Применяется к вновь извлеченным записям; существующие можно извлечь заново на вкладке «База знаний».'
+  text_helpdesk_kb_extract_prompt_project_info: 'Промпт извлечения проекта, комбинируемый — в зависимости от режима промпта — с центральным промптом действующей степени детализации. В режиме «Заменять» он должен заставлять модель возвращать JSON.'
+  field_helpdesk_kb_top_k: 'Top-K'
+  field_helpdesk_kb_min_score: 'Мин. score'
+  field_helpdesk_kb_min_results: 'Мин. результатов'
+  text_helpdesk_kb_retrieval_info: 'Поиск: получить до Top-K совпадений, из них сохранить те, что не ниже мин. score; предлагать только при остатке не менее мин. результатов.'
+  field_helpdesk_kb_rerank_enabled: 'Использовать реранкер'
+  text_helpdesk_kb_rerank_enabled_info: 'Вторая стадия поиска: кросс-энкодер заново оценивает предварительный отбор из векторного магазина. Заметно точнее, чем только схожесть, но стоит одного дополнительного запроса на каждый поиск. По умолчанию выключено.'
+  field_helpdesk_kb_rerank_model: 'Модель реранкера'
+  field_helpdesk_kb_rerank_endpoint: 'Конечная точка реранкера'
+  text_helpdesk_kb_rerank_endpoint_info: 'Базовый URL без /rerank. Оставьте пустым, чтобы использовать конечную точку эмбеддингов — у большинства провайдеров обе модели находятся на одном базовом URL.'
+  field_helpdesk_kb_rerank_api_key: 'API-ключ реранкера'
+  text_helpdesk_kb_rerank_api_key_info: 'Оставьте пустым, чтобы использовать API-ключ эмбеддингов.'
+  field_helpdesk_kb_rerank_candidates: 'Кандидаты'
+  field_helpdesk_kb_rerank_min_score: 'Мин. score (реранк)'
+  field_helpdesk_kb_rerank_timeout: 'Таймаут (с)'
+  text_helpdesk_kb_rerank_scoring_info: 'Из векторного магазина берутся кандидаты, оцениваются заново, и из них сохраняются лучшие Top-K выше минимального значения. Пока реранкинг активен, это минимальное значение заменяет минимальное по схожести выше — это разные шкалы, настраивать их нужно раздельно. Если реранкер выходит из строя, незаметно снова применяется порядок по схожести с его минимальным значением.'
+  text_helpdesk_kb_privacy_info: 'Защита данных: текст проблемы/решения передается провайдеру эмбеддингов и сохраняется в векторном магазине. При активном реранкере при каждом поиске текущий текст заявки вместе с текстами проблем кандидатов — то есть содержимое других заявок того же проекта — передается в одном запросе провайдеру реранкера; там ничего не сохраняется. Для полностью локальной работы используйте самостоятельно размещенные конечные точки для эмбеддингов и реранкера. Знания строго привязаны к проекту.'
+  field_helpdesk_kb_ingest_mode: 'Вносить в базу знаний'
+  text_helpdesk_kb_ingest_mode_info: 'Будут ли решенные заявки этого проекта становиться записями базы знаний.'
+  label_helpdesk_kb_ingest_off: 'Выключено'
+  label_helpdesk_kb_ingest_auto: 'Автоматически при закрытии'
+  label_helpdesk_kb_ingest_manual: 'Вручную (разрешать для каждой заявки)'
+  field_helpdesk_kb_proposal_display: 'Показывать предлагаемые решения'
+  text_helpdesk_kb_proposal_display_info: 'Будут ли решения из похожих решенных заявок и где именно.'
+  label_helpdesk_kb_display_off: 'Выключено'
+  label_helpdesk_kb_display_summary: 'В заметке с ИИ-сводкой'
+  label_helpdesk_kb_display_sidebar: 'Панель боковой колонки'
+  label_helpdesk_kb_display_both: 'Сводка и боковая колонка'
+  label_helpdesk_kb_proposals: 'Похожие решенные заявки'
+  label_helpdesk_kb_used_in_summary: 'в ИИ-сводке'
+  text_helpdesk_kb_not_fitting: 'По данным ИИ-сводки не подходит'
+  text_helpdesk_kb_none_fitting: 'По данным ИИ-сводки ни один из этих случаев не подходит.'
+  text_helpdesk_kb_not_reranked: 'Реранкер недоступен — порядок только по текстовой схожести.'
+  button_helpdesk_kb_approve: 'Внести в базу знаний'
+  button_helpdesk_kb_ingest: 'Добавить в базу знаний'
+  button_helpdesk_kb_retry: 'Повторить попытку (добавить в базу знаний)'
+  text_helpdesk_kb_in_base: 'В базе знаний'
+  text_helpdesk_kb_skipped: 'Не внесено: четкого решения не распознано. Дополните заметку о решении и повторите попытку.'
+  notice_helpdesk_kb_ingest_queued: 'Заявка вносится в базу знаний.'
+  notice_helpdesk_kb_approved: 'Добавлено в базу знаний.'
+  text_helpdesk_kb_not_configured: 'База знаний не включена/не настроена (см. Администрирование → Плагины).'
+  text_helpdesk_kb_nothing_to_approve: 'Для этой заявки нет ожидающей записи базы знаний.'
+  label_helpdesk_kb: 'База знаний'
+  label_helpdesk_kb_entry: 'Запись'
+  label_helpdesk_kb_status_pending: 'Ожидает'
+  label_helpdesk_kb_status_approved: 'Одобрено'
+  label_helpdesk_kb_status_skipped: 'Нет решения'
+  label_helpdesk_kb_status_rejected: 'Отклонено'
+  label_helpdesk_kb_filter_default: 'Все, кроме «Нет решения»'
+  label_helpdesk_kb_search: 'Поиск по проблеме/решению'
+  label_helpdesk_kb_curated_by: 'проверено пользователем %{user}'
+  label_helpdesk_kb_indexed: 'В векторном магазине'
+  label_helpdesk_kb_open_entry: 'Открыть запись базы знаний'
+  field_helpdesk_kb_problem: 'Проблема'
+  field_helpdesk_kb_solution: 'Решение'
+  button_helpdesk_kb_new_entry: 'Новая запись'
+  button_helpdesk_kb_reindex: 'Перестроить индекс'
+  button_helpdesk_kb_approve_short: 'Одобрить'
+  button_helpdesk_kb_reject: 'Отклонить'
+  text_helpdesk_kb_tab_info: 'Пары «проблема/решение», извлеченные из решенных заявок. Для предложений решений и черновиков ответов используются только одобренные записи. При сохранении вектор пересчитывается — никогда не редактируйте записи напрямую в векторной базе данных.'
+  text_helpdesk_kb_problem_info: 'Для поиска по схожести используется только текст проблемы; формулируйте его так, как клиент описал бы ошибку.'
+  text_helpdesk_kb_status_info: 'Одобренные записи сразу доступны для поиска; ожидающие сохраняются, но не используются.'
+  text_helpdesk_kb_issue_id_info: 'Заявка этого проекта, на которой основана запись (одна запись на заявку).'
+  text_helpdesk_kb_reindex_info: 'Очищает векторный магазин этого проекта и пересчитывает все одобренные записи (например, после смены модели эмбеддингов).'
+  text_helpdesk_kb_reindex_confirm: 'Перестроить векторный индекс этого проекта? До завершения предложения решений могут быть неполными.'
+  text_helpdesk_kb_reject_confirm: 'Отклонить запись? Она будет удалена из поиска и при повторном закрытии заявки автоматически не создастся заново.'
+  text_helpdesk_kb_delete_confirm: 'Удалить запись окончательно? Заявка при следующем закрытии может быть внесена снова.'
+  text_helpdesk_kb_saved_not_indexed: 'Сохранено, но обновить вектор не удалось (магазин или эмбеддинги недоступны/не настроены). Затем выполните «Перестроить индекс».'
+  text_helpdesk_kb_problem_blank: 'Сохранено, но не доступно для поиска: текст проблемы пуст.'
+  text_helpdesk_kb_unindex_failed: 'Не удалось удалить вектор из магазина (недоступен). Запись сохранена; повторите попытку или выполните «Перестроить индекс», как только магазин станет доступен.'
+  notice_helpdesk_kb_saved_indexed: 'Сохранено и заново встроено в вектор.'
+  notice_helpdesk_kb_reindex_queued: 'Перестройка индекса запущена. Она выполняется в фоновом режиме.'
+  button_helpdesk_kb_reextract: 'Извлечь записи заново'
+  text_helpdesk_kb_reextract_info: 'Повторно выполняет ИИ-извлечение записей с текущей степенью детализации. Записи, отредактированные, одобренные или отклоненные человеком, остаются без изменений.'
+  text_helpdesk_kb_reextract_confirm: '%{count} записей были извлечены с другой степенью детализации. Извлечь заново с «%{level}»? Это стоит одного ИИ-вызова на запись.'
+  text_helpdesk_kb_reextract_confirm_all: 'Извлечь заново все %{count} записей (не отредактированных человеком) с «%{level}», например, после изменения промпта? Это стоит одного ИИ-вызова на запись.'
+  notice_helpdesk_kb_reextract_queued: 'Повторное извлечение %{count} записей запущено. Оно выполняется в фоновом режиме; записи сохраняют свой статус.'
+  notice_helpdesk_kb_reextract_nothing: 'Нет записей для повторного извлечения.'
+
+  # --- Проверка полноты входящих первичных писем («уточняющий запрос») -------
+  label_helpdesk_info_request: 'Проверка полноты входящих писем'
+  label_helpdesk_info_request_mode_off: 'Выключено'
+  label_helpdesk_info_request_mode_heuristic: 'На основе правил'
+  label_helpdesk_info_request_mode_ai: 'С помощью ИИ'
+  field_helpdesk_info_request_enabled: 'Включить проверку полноты'
+  field_helpdesk_info_request_mode: 'Режим'
+  field_helpdesk_info_request_min_chars: 'Мин. длина (символы)'
+  field_helpdesk_info_request_min_words: 'Мин. длина (слова)'
+  field_helpdesk_info_request_require_attachment: 'Требовать вложение'
+  field_helpdesk_info_request_keywords: 'Ожидаемые термины'
+  field_helpdesk_info_request_threshold: 'Порог'
+  field_helpdesk_info_request_ai_prompt: 'Промпт проверки'
+  field_helpdesk_info_request_ai_prompt_mode: 'Режим промпта'
+  field_helpdesk_info_request_subject: 'Тема уточняющего письма'
+  field_helpdesk_info_request_body: 'Текст уточняющего письма'
+  field_helpdesk_info_request_status: 'Статус после уточняющего запроса'
+  field_helpdesk_info_request_note_visibility: 'Заметка о запросе в журнале'
+  label_helpdesk_info_request_note_public: 'Публичная (клиент тоже видит)'
+  label_helpdesk_info_request_note_private: 'Внутренняя (только сотрудники)'
+  text_helpdesk_info_request_note_visibility_info: 'Заметка фиксирует, что уточняющий запрос был отправлен и что спрашивалось. Публичная держит сотрудника и клиента в курсе; внутренняя требует права «Просматривать частные заметки».'
+  text_helpdesk_info_request_enabled_info: 'Главный переключатель. Пока он выключен, ни один проект не проверяет — независимо от его настроек.'
+  text_helpdesk_info_request_mode_info: 'Проверяется ТОЛЬКО первое письмо новой заявки. Режим на основе правил работает без ИИ; режим с ИИ требует настроек ИИ выше.'
+  text_helpdesk_info_request_globally_off: 'Проверка полноты централизованно отключена (Администрирование → Плагины), поэтому эти настройки пока не действуют.'
+  text_helpdesk_info_request_ai_unavailable: 'ИИ централизованно отключен, поэтому режим «С помощью ИИ» работать не может. Используйте режим на основе правил или сначала включите ИИ.'
+  text_helpdesk_info_request_min_chars_info: 'Более короткие письма считаются неполными. Перед замером удаляются цитируемые переписки и подписи. 0 отключает это правило.'
+  text_helpdesk_info_request_min_words_info: 'Как выше, подсчет в словах. 0 отключает это правило.'
+  text_helpdesk_info_request_require_attachment_info: 'Считать письма вообще без вложений (скриншот, лог, фото) неполными.'
+  field_helpdesk_info_request_min_attachment_kb: 'Минимальный размер изображений'
+  text_helpdesk_info_request_min_attachment_kb_info: 'В КБ. Меньшие изображения не считаются скриншотом или фото — логотипы подписей и пиксели отслеживания есть почти в каждом письме. Касается только изображений; небольшой лог или PDF по-прежнему считается. 0 отключает порог.'
+  field_helpdesk_info_request_sender_blacklist: 'Этих отправителей никогда не спрашивать'
+  field_helpdesk_contact_info_request_opt_out: 'Никогда не запрашивать дополнительную информацию'
+  label_helpdesk_contact_info_request_opt_out_short: 'без уточняющего запроса'
+  button_helpdesk_contact_info_request_stop: 'не спрашивать'
+  button_helpdesk_contact_info_request_resume: 'спрашивать снова'
+  text_helpdesk_contact_info_request_resume_info: 'Проверка полноты может снова запрашивать у этого клиента недостающие сведения.'
+  text_helpdesk_contact_info_request_opt_out_info: 'За этим адресом никто не отвечает на уточняющий запрос: отчеты резервного копирования, мониторинговые оповещения, письма cron-задач. Заявки по-прежнему создаются и проверяются на полноту, но клиент никогда не опрашивается. Такое же решение для целого адреса или домена задается в настройке проекта «Этих отправителей никогда не спрашивать».'
+  text_helpdesk_info_request_sender_blacklist_info: 'По одной записи в строке: полный адрес, чистый домен или "@domain". Отчеты резервного копирования, письма cron-задач и мониторинговые оповещения — настоящие заявки, но за ними никто не сможет ответить на уточняющий запрос. Письма, помечающие себя в заголовках как машинные, пропускаются и без записи: Auto-Submitted, Precedence (bulk, list, junk), X-Auto-Response-Suppress, X-MS-Exchange-Generated-Message-Source, а также заголовки X-Autoreply/X-Autorespond/X-Autoresponder. Отчеты о недоставке (NDR) не пропускаются.'
+  text_helpdesk_info_request_keywords_info: 'По одному термину в строке. Письмо должно содержать хотя бы один из них, иначе оно считается неполным. Пусто отключает это правило.'
+  text_helpdesk_info_request_threshold_info: 'Сколько правил должно быть нарушено, прежде чем последует запрос. 1 = уже первое нарушенное правило вызывает уточняющий запрос.'
+  text_helpdesk_info_request_ai_prompt_info: 'Модель должна отвечать в формате JSON ({"complete": true|false, "missing": [...]}). Все нечитаемое считается полным — письмо при этом не отправляется.'
+  text_helpdesk_info_request_subject_info: 'Макросы разрешены. Пусто = используется центральный стандартный текст.'
+  text_helpdesk_info_request_body_info: 'Макросы разрешены. {{missing_info}} вставляет список недостающих сведений. Пусто = используется центральный стандартный текст.'
+  text_helpdesk_info_request_status_info: 'Необязательно, например, «Ожидание клиента». Пусто оставляет статус без изменений. Закрывающие статусы не предлагаются: закрытие заявки для SLA считается и реакцией, И решением, и этого не должна вызывать автоматическая проверка.'
+  text_helpdesk_info_request_reason_too_short: 'Краткое описание проблемы (что именно не работает?)'
+  text_helpdesk_info_request_reason_too_few_words: 'Несколько дополнительных сведений о вашем обращении'
+  text_helpdesk_info_request_reason_no_attachment: 'По возможности приложите скриншот или файл с текстом ошибки'
+  text_helpdesk_info_request_reason_no_keyword: 'Затронутая система, приложение или устройство'
+  note_helpdesk_info_request_sent: 'Автоматический уточняющий запрос отправлен на %{email}: первичное письмо содержало недостаточно информации.'
+  label_helpdesk_ai_stats_type_completeness: 'Проверка полноты'
+
+  # Статистика заявок (вкладка «Статистика заявок», право view_helpdesk_ticket_statistics)
+  label_helpdesk_ticket_statistics: 'Статистика заявок'
+  permission_view_helpdesk_ticket_statistics: 'Просматривать статистику заявок'
+  permission_view_helpdesk_kb: 'Просматривать базу знаний'
+  permission_edit_helpdesk_kb: 'Редактировать записи базы знаний'
+  permission_manage_helpdesk_kb: 'Управлять базой знаний (удаление, перестройка индекса)'
+  label_helpdesk_ticket_stats_no_data: 'Нет заявок хелпдеска за выбранный период.'
+  label_helpdesk_ticket_stats_basis: 'Временная база'
+  label_helpdesk_ticket_stats_basis_wall: 'Календарное время'
+  label_helpdesk_ticket_stats_basis_business: 'Рабочее время'
+  text_helpdesk_ticket_stats_basis_wall: 'Временные значения в календарном времени (круглосуточно).'
+  text_helpdesk_ticket_stats_basis_business: 'Временные значения учитывают только SLA-рабочее время проекта.'
+  label_helpdesk_ticket_stats_reopened: 'Повторно открыто'
+  label_helpdesk_ticket_stats_reopen_count: 'повторных открытий'
+  label_helpdesk_ticket_stats_awaiting_agent: 'Ожидание ответа'
+  label_helpdesk_ticket_stats_one_touch: 'Решено одним ответом'
+  label_helpdesk_ticket_stats_of_closed: 'из закрытых'
+  label_helpdesk_ticket_stats_time_in_status: 'Время нахождения в статусе'
+  label_helpdesk_ticket_stats_status: 'Статус'
+  label_helpdesk_ticket_stats_passed_through: 'Заявки'
+  label_helpdesk_ticket_stats_initial: 'Начальный статус'
+  label_helpdesk_ticket_stats_currently_in: 'Сейчас'
+  label_helpdesk_ticket_stats_segments: 'Завершенные нахождения'
+  label_helpdesk_ticket_stats_mean: 'Среднее'
+  text_helpdesk_ticket_stats_dwell_note: 'В длительности входят только завершенные нахождения (заявка перешла дальше); «Сейчас» — число заявок, находящихся в этом статусе в данный момент.'
+  label_helpdesk_ticket_stats_conversation: 'Длина переписки'
+  label_helpdesk_ticket_stats_incoming: 'Входящие письма'
+  label_helpdesk_ticket_stats_agent_replies: 'Ответы сотрудников'
+  label_helpdesk_ticket_stats_automated: 'Автоматические письма'
+  label_helpdesk_ticket_stats_dist_0: 'без писем'
+  label_helpdesk_ticket_stats_dist_1: '1 письмо'
+  label_helpdesk_ticket_stats_dist_2: '2 письма'
+  label_helpdesk_ticket_stats_dist_3_5: '3–5 писем'
+  label_helpdesk_ticket_stats_dist_6_10: '6–10 писем'
+  label_helpdesk_ticket_stats_dist_gt_10: 'более 10'
+  label_helpdesk_ticket_stats_by_agent: 'По сотрудникам'
+  label_helpdesk_ticket_stats_agent: 'Сотрудник'
+  label_helpdesk_ticket_stats_assigned: 'Назначено'
+  label_helpdesk_ticket_stats_replies: 'Ответы'
+  label_helpdesk_ticket_stats_closed_by: 'Закрыто кем'
+  label_helpdesk_ticket_stats_unassigned: 'Не назначено'
+  label_helpdesk_ticket_stats_deleted: 'удалено'
+  label_helpdesk_ticket_stats_first_response: 'Первая реакция'
+  label_helpdesk_ticket_stats_resolution: 'Решение'
+  text_helpdesk_ticket_stats_assigned_note: '«Назначено», «Открыто» и «Закрыто» относятся к текущему исполнителю; «Ответы», «Первая реакция» и «Закрытия» — к действующему пользователю.'
+  label_helpdesk_ticket_stats_by_customer: 'По клиентам'
+  label_helpdesk_ticket_stats_customer: 'Клиент'
+  label_helpdesk_ticket_stats_company: 'Компания'
+  label_helpdesk_ticket_stats_no_contact: 'Без контакта'
+  text_helpdesk_ticket_stats_top_customers: '%{n} клиентов с наибольшим числом заявок за период.'
+
+  # --- Блок ответа для клиента (цвета блока в форме редактирования) ----------
+  label_helpdesk_reply_box: 'Блок ответа'
+  label_helpdesk_pick_color: 'Выбрать цвет'
+  label_helpdesk_reply_box_preview: 'Предпросмотр'
+  text_helpdesk_reply_box_info: 'Пока ответ включен, поля письма, поле заметки и предпросмотр подписи отображаются одним блоком с предупреждающей рамкой — чтобы было видно, что этот текст уходит клиенту. Оба цвета можно переопределить для каждого проекта.'
+  field_helpdesk_reply_box_color: 'Цвет фона'
+  text_helpdesk_reply_box_color_info: 'Шестнадцатеричный цвет блока, например, #edf2fa. Все остальное откатывается к значению по умолчанию.'
+  text_helpdesk_reply_box_color_project_info: 'Оставьте пустым, чтобы использовать центральную настройку (%{value}).'
+  field_helpdesk_reply_hazard_color: 'Цвет предупреждающей рамки'
+  text_helpdesk_reply_hazard_color_info: 'Шестнадцатеричный цвет диагональных предупреждающих полос, например, #e8a33d. Все остальное откатывается к значению по умолчанию.'
+  text_helpdesk_reply_hazard_color_project_info: 'Оставьте пустым, чтобы использовать центральную настройку (%{value}).'
+  # Redmine разрешает имена атрибутов в сообщениях валидации через field_<attr>.
+  field_reply_box_color: 'Цвет фона'
+  field_reply_hazard_color: 'Цвет предупреждающей рамки'
+  # --- Список блокировки вложений (логотипы подписей, иконки, счетные пиксели)
+  label_helpdesk_attachment_blacklist: 'Заблокированные вложения'
+  text_helpdesk_attachment_blacklist_info: 'Заблокированные здесь файлы удаляются из входящих писем этого проекта. Записи создаются кнопкой «Заблокировать» рядом с вложением в заявке. Сравнивается содержимое файла (SHA-256), а не имя файла.'
+  label_helpdesk_blacklist_hits: 'Совпадения'
+  button_helpdesk_blacklist_attachment: 'Заблокировать'
+  label_helpdesk_blacklist_attachment_title: 'Заблокировать этот файл в проекте (логотип подписи, иконка, счетный пиксель) и удалить все уже прикрепленные к заявкам копии.'
+  text_helpdesk_blacklist_confirm_one: "Заблокировать «%{file}» в этом проекте?\n\nБудет удалено 1 вложение. Последующие письма с этим же файлом больше не будут его прикреплять."
+  text_helpdesk_blacklist_confirm_many: "Заблокировать «%{file}» в этом проекте?\n\nБудет удалено вложений: %{count}. Последующие письма с этим же файлом больше не будут его прикреплять."
+  notice_helpdesk_attachment_blacklisted: '«%{file}» заблокирован в этом проекте, удалено вложений: %{count}.'
+  field_helpdesk_blacklist_types: 'Блокируемые типы файлов'
+  text_helpdesk_blacklist_types_info: 'Расширения (gif, png) или MIME-типы (image/gif, image/*), через запятую. Кнопку «Заблокировать» в заявке получают только они — .eml, .msg или PDF так случайно не заблокировать. «*» разрешает любой тип.'
+  text_helpdesk_blacklist_types_project_info: 'Оставьте пустым, чтобы использовать центральную настройку (%{value}).'
+  field_helpdesk_blacklist_max_kb: 'Наибольший блокируемый файл (КБ)'
+  text_helpdesk_blacklist_max_kb_info: 'Выше этого размера кнопка скрывается. Логотипы подписей — самое крупное, что стоит блокировать; со скриншотов начинается зона сверх этого. 0 отключает предел.'
+  text_helpdesk_blacklist_max_kb_project_info: 'Оставьте пустым, чтобы использовать центральную настройку (%{value} КБ).'
+  text_helpdesk_blacklist_guard_info: 'Эти два предела определяют, для каких вложений сотрудникам вообще предлагается кнопка «Заблокировать». Это защита кнопки, а не фильтр входящей почты. Каждый проект может их переопределить.'
+  error_helpdesk_blacklist_max_kb_invalid: 'Наибольший блокируемый файл должен быть целым числом в КБ (0 отключает предел).'
+  error_helpdesk_attachment_not_blacklistable: '«%{file}» не относится к блокируемым типам файлов или превышает предел размера.'
+  error_helpdesk_attachment_unreadable: 'Файл не удалось прочитать, поэтому его нельзя заблокировать.'
+
+  # Вложенный ключ, не плоская конвенция label_*: селектор блоков «Моя страница»
+  # в Redmine ищет название блока как my.blocks.<имя партиала>.
+  my:
+    blocks:
+      helpdesk_awaiting_agent: 'Хелпдеск: ожидает обработки'

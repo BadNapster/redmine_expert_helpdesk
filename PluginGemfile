@@ -7,14 +7,14 @@
 # Harmless on Redmine 5/6 (Ruby 3.x), where base64 still resolves.
 gem 'base64'
 
-# pdf-reader: optionale Textextraktion aus PDF-Anhaengen fuer die KI-Zusammenfassung
-# (HelpdeskAiSummaryJob). Der Aufruf ist LoadError-gekapselt – fehlt das Gem im
-# Image, wird PDF-Text uebersprungen, der Rest der Funktion bleibt nutzbar.
+# pdf-reader: optional text extraction from PDF attachments for the AI summary
+# (HelpdeskAiSummaryJob). The call is LoadError-guarded - if the gem is missing
+# in the image, PDF text is skipped and the rest of the feature stays usable.
 gem 'pdf-reader'
 
-# Wissensbasis (RAG): Das Standard-Backend ist Qdrant (reines HTTP, kein Gem).
-# Nur fuer das optionale pgvector-Backend (kb_backend=pgvector) wird das pg-Gem
-# benoetigt. Es wird hier BEWUSST NICHT aktiviert, damit der Standard-Build ohne
-# libpq-dev nicht bricht; PgvectorStore laedt pg per LoadError-gekapseltem require.
-# Zum Aktivieren in der Deployment-Gemfile ergaenzen (und libpq-dev im Image):
+# Knowledge base (RAG): the default backend is Qdrant (pure HTTP, no gem).
+# The pg gem is only needed for the optional pgvector backend (kb_backend=pgvector).
+# It is deliberately NOT activated here, so the default build does not break
+# without libpq-dev; PgvectorStore loads pg via a LoadError-guarded require.
+# To activate, add it to the deployment Gemfile (and libpq-dev to the image):
 #   gem 'pg'

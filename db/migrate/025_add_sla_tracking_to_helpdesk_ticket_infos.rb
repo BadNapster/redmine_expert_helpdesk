@@ -1,5 +1,5 @@
-# SLA-Tracking je Ticket: Zeitpunkt der ersten Reaktion, berechnete
-# Geschaeftsminuten und Benachrichtigungs-Marker (gegen Doppel-Mails).
+# SLA tracking per ticket: time of the first reaction, calculated
+# business minutes and notification markers (against duplicate mails).
 class AddSlaTrackingToHelpdeskTicketInfos < ActiveRecord::Migration[6.1]
   def change
     change_table :helpdesk_ticket_infos, :bulk => true do |t|

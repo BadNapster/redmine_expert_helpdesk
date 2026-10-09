@@ -1,5 +1,5 @@
-# Verknuepft einen Kundenkontakt mit einem Ticket und sendet optional eine initiale Mail.
-# Wird beim manuellen Zuordnen an bestehende Tickets und beim Erstellen neuer Tickets verwendet.
+# Links a customer contact to a ticket and optionally sends an initial mail.
+# Used when manually assigning existing tickets and when creating new tickets.
 module RedmineExpertHelpdesk
   class InitMailer
     def self.call(**kwargs)
@@ -10,8 +10,8 @@ module RedmineExpertHelpdesk
                    contact_name: nil, send_mail: true, mail_body: nil,
                    cc: nil, bcc: nil)
       @issue         = issue
-      # contact_email darf eine kommagetrennte Liste sein; der erste Empfaenger
-      # wird als Kundenkontakt verknuepft, alle erhalten die Mail.
+      # contact_email may be a comma-separated list; the first recipient is
+      # linked as the customer contact, everyone receives the mail.
       @to_list       = split_addresses(contact_email)
       @contact_email = @to_list.first.to_s
       @cc_list       = split_addresses(cc)
@@ -67,7 +67,7 @@ module RedmineExpertHelpdesk
 
     private
 
-    # Kommagetrennte Adressliste in normalisierte Einzeladressen zerlegen
+    # Split a comma-separated address list into normalised single addresses
     def split_addresses(value)
       value.to_s.split(/[,;]/).map { |a| a.strip.downcase }.reject(&:blank?).uniq
     end
@@ -82,7 +82,7 @@ module RedmineExpertHelpdesk
       ctx         = { :issue => @issue, :contact => contact, :user => @user }
       body_source = @mail_body.presence || @issue.description.to_s
 
-      # Wiki-Markup in HTML umwandeln (Beschreibungsfeld enthaelt Redmine-Formatierung)
+      # Convert wiki markup to HTML (the description field contains Redmine formatting)
       body_html = description_to_html(body_source)
 
       header_html = plain_to_html(TemplateRenderer.render(@mailbox.reply_header.to_s, ctx))
@@ -90,10 +90,10 @@ module RedmineExpertHelpdesk
       [header_html, body_html, footer_html].reject(&:blank?).join("\n")
     end
 
-    # Konvertiert Redmine-Wiki-Markup in HTML.
+    # Converts Redmine wiki markup to HTML.
     def description_to_html(text)
       return '' if text.blank?
-      return text if text.match?(/<\w/)  # schon HTML (z. B. manueller Mailtext)
+      return text if text.match?(/<\w/)  # already HTML (e.g. hand-written mail text)
       begin
         Redmine::WikiFormatting.formatter.new(text).to_html.to_s
       rescue StandardError
@@ -101,7 +101,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Findet Issue-Anhaenge, die per <img src="filename"> im HTML referenziert werden.
+    # Finds issue attachments referenced via <img src="filename"> in the HTML.
     def find_inline_attachments(html)
       return [] if html.blank?
       srcs = html.scan(/src=["']([^"']+)["']/i).flatten
@@ -121,8 +121,8 @@ module RedmineExpertHelpdesk
       "<#{SecureRandom.uuid}@#{domain}>"
     end
 
-    # Issue-Anhaenge, die NICHT als Inline-Bild im HTML referenziert sind, werden
-    # als regulaere Datei-Anhaenge mitgeschickt (z. B. hochgeladene PDFs/Dokumente).
+    # Issue attachments that are NOT referenced as inline images in the HTML are
+    # sent along as regular file attachments (e.g. uploaded PDFs/documents).
     def regular_attachments(inline_atts)
       inline_ids = inline_atts.map(&:id)
       @issue.attachments.to_a
@@ -130,7 +130,7 @@ module RedmineExpertHelpdesk
             .select { |a| a.diskfile && File.exist?(a.diskfile) }
     end
 
-    # SMTP: Inline-Bilder als Base64-Data-URI einbetten, uebrige Anhaenge anhaengen.
+    # SMTP: embed inline images as Base64 data URIs, append the remaining attachments.
     def send_smtp(subject, body_html, message_id)
       inline_atts  = find_inline_attachments(body_html)
       regular_atts = regular_attachments(inline_atts)
@@ -171,14 +171,14 @@ module RedmineExpertHelpdesk
       # Redmine's relay files nothing in the mailbox itself. No-op for Graph.
       MailProvider.for(@mailbox).archive_sent(mail_obj.to_s)
 
-      # Versendete Dateien (regulaere Anhaenge + inline eingebettete Bilder) fuer die
-      # Anzeige im Kundenbereich zurueckgeben.
+      # Return the sent files (regular attachments + inline embedded images) for
+      # display in the customer area.
       regular_atts.map(&:filename) + inline_atts.map(&:filename)
     end
 
-    # Roher MIME-Versand ueber das Backend des Postfachs (Graph-API oder eigener
-    # SMTP-Server): CID-Inline-Bilder + regulaere Anhaenge in einer vollstaendigen
-    # MIME-Nachricht.
+    # Raw MIME sending via the mailbox's backend (Graph API or its own SMTP
+    # server): CID inline images + regular attachments in one complete MIME
+    # message.
     def send_provider_mime(subject, body_html, message_id)
       inline_atts            = find_inline_attachments(body_html)
       regular_atts           = regular_attachments(inline_atts)
@@ -191,12 +191,12 @@ module RedmineExpertHelpdesk
         :subject => subject, :message_id => message_id
       ) { MailProvider.outgoing_for(@mailbox).send_mail_mime(mime_msg) }
 
-      # Versendete Dateien (regulaere Anhaenge + inline eingebettete Bilder) fuer die
-      # Anzeige im Kundenbereich zurueckgeben.
+      # Return the sent files (regular attachments + inline embedded images) for
+      # display in the customer area.
       regular_atts.map(&:filename) + cid_map.keys.map(&:filename)
     end
 
-    # Ersetzt src="filename" durch data:-URI fuer SMTP-Transport.
+    # Replaces src="filename" with a data: URI for the SMTP transport.
     def embed_inline_images(html, atts)
       processed = html.dup
       atts.each do |att|
@@ -212,7 +212,7 @@ module RedmineExpertHelpdesk
       processed
     end
 
-    # Ersetzt src="filename" durch cid:... und gibt [{att => cid}, html] zurueck.
+    # Replaces src="filename" with cid:... and returns [{att => cid}, html].
     def build_cid_map(html, atts)
       cid_map   = {}
       processed = html.dup
@@ -229,8 +229,8 @@ module RedmineExpertHelpdesk
       [cid_map, processed]
     end
 
-    # Erstellt eine vollstaendige RFC-2822-MIME-Nachricht mit optionalen CID-Inline-Bildern
-    # und regulaeren Datei-Anhaengen (multipart/mixed umschliesst multipart/related).
+    # Builds a complete RFC 2822 MIME message with optional CID inline images
+    # and regular file attachments (multipart/mixed wraps multipart/related).
     def build_cid_mime(from, to, subject, body_html, regular_atts, cid_map, message_id)
       bnd_mixed   = "mix#{SecureRandom.hex(10)}"
       bnd_related = "rel#{SecureRandom.hex(10)}"
@@ -243,7 +243,7 @@ module RedmineExpertHelpdesk
       ln << "From: #{from}"
       ln << "To: #{to}"
       ln << "Cc: #{@cc_list.join(', ')}" if @cc_list.any?
-      # Bcc-Header: Exchange entfernt ihn beim Versand und stellt an die Adressen zu
+      # Bcc header: Exchange strips it on send and still delivers to the addresses
       ln << "Bcc: #{@bcc_list.join(', ')}" if @bcc_list.any?
       ln << "Subject: #{mime_encode_subject(subject)}"
 
@@ -272,7 +272,7 @@ module RedmineExpertHelpdesk
         ln << "--#{bnd_mixed}"
       end
 
-      # HTML-Teil
+      # HTML part
       ln << "Content-Type: text/html; charset=\"UTF-8\""
       ln << "Content-Transfer-Encoding: base64"
       ln << ""

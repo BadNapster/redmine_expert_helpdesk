@@ -1,9 +1,9 @@
 name: CI
 
-# Fuehrt die Plugin-Tests (MiniTest, unit + integration) gegen alle aktuell
-# unterstuetzten Redmine-Versionen in einer sauberen Umgebung aus. Fuer jeden
-# Matrix-Eintrag wird Redmine frisch ausgecheckt, das Plugin einkopiert, eine
-# leere MariaDB migriert und danach `redmine:plugins:test` gestartet.
+# Runs the plugin tests (MiniTest, unit + integration) against all currently
+# supported Redmine versions in a clean environment. For each matrix entry,
+# Redmine is freshly checked out, the plugin is copied in, an empty MariaDB is
+# migrated and then `redmine:plugins:test` is started.
 
 on:
   push:
@@ -11,7 +11,7 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Aeltere Laeufe desselben Branches/PRs abbrechen, sobald ein neuer startet.
+# Cancel older runs of the same branch/PR as soon as a new one starts.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -35,8 +35,8 @@ jobs:
 
     env:
       RAILS_ENV: test
-      # Redmine liest config/database.yml schon beim `bundle install`, um den
-      # DB-Adapter (mysql2) zu bestimmen — daher unten vor dem Bundle schreiben.
+      # Redmine reads config/database.yml already during `bundle install` to
+      # determine the DB adapter (mysql2) - hence written below before bundling.
       REDMINE_DIR: redmine
 
     services:
@@ -54,7 +54,7 @@ jobs:
           --health-retries=15
 
     steps:
-      # 1. Redmine-Core in der passenden stabilen Version auschecken.
+      # 1. Check out Redmine core in the matching stable version.
       - name: Checkout Redmine ${{ matrix.redmine }}
         uses: actions/checkout@v4
         with:
@@ -62,27 +62,27 @@ jobs:
           ref: ${{ matrix.redmine }}
           path: ${{ env.REDMINE_DIR }}
 
-      # 2. Dieses Plugin in den Plugin-Ordner von Redmine legen.
+      # 2. Put this plugin into Redmine's plugin folder.
       - name: Checkout plugin
         uses: actions/checkout@v4
         with:
           path: ${{ env.REDMINE_DIR }}/plugins/redmine_expert_helpdesk
 
-      # 3. Native Abhaengigkeiten fuer mysql2 (und rmagick, falls im Bundle).
+      # 3. Native dependencies for mysql2 (and rmagick, if in the bundle).
       - name: Install system packages
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             default-libmysqlclient-dev libmagickwand-dev imagemagick pkg-config
 
-      # 4. Ruby einrichten (Bundle-Cache haengt an Redmine-Ref + Ruby-Version).
+      # 4. Set up Ruby (bundle cache is keyed on Redmine ref + Ruby version).
       - name: Set up Ruby ${{ matrix.ruby }}
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
 
-      # 5. Test-Datenbank konfigurieren (MariaDB, utf8mb4, READ-COMMITTED wie
-      #    von Redmine empfohlen). Muss vor `bundle install` existieren.
+      # 5. Configure the test database (MariaDB, utf8mb4, READ-COMMITTED as
+      #    recommended by Redmine). Must exist before `bundle install`.
       - name: Write database.yml
         working-directory: ${{ env.REDMINE_DIR }}
         run: |
@@ -99,7 +99,7 @@ jobs:
               transaction_isolation: "READ-COMMITTED"
           YML
 
-      # 6. Gems cachen (Redmine committet keine Gemfile.lock, daher Key ueber Ref).
+      # 6. Cache gems (Redmine commits no Gemfile.lock, so the key is on the ref).
       - name: Cache gems
         uses: actions/cache@v4
         with:
@@ -108,7 +108,7 @@ jobs:
           restore-keys: |
             gems-${{ matrix.redmine }}-ruby${{ matrix.ruby }}-
 
-      # 7. Gems installieren (ohne development-Gruppe; test-Gruppe wird gebraucht).
+      # 7. Install gems (without the development group; the test group is needed).
       - name: Install gems
         working-directory: ${{ env.REDMINE_DIR }}
         run: |
@@ -116,8 +116,8 @@ jobs:
           bundle config set --local without 'development'
           bundle install --jobs 4 --retry 3
 
-      # 8. Saubere Umgebung aufbauen: Secret-Token, Core-Migrationen,
-      #    danach die Plugin-Migrationen.
+      # 8. Build a clean environment: secret token, core migrations,
+      #    then the plugin migrations.
       - name: Prepare Redmine
         working-directory: ${{ env.REDMINE_DIR }}
         run: |
@@ -125,7 +125,7 @@ jobs:
           bundle exec rake db:create db:migrate
           bundle exec rake redmine:plugins:migrate NAME=redmine_expert_helpdesk
 
-      # 9. Plugin-Tests (unit + integration) ausfuehren.
+      # 9. Run the plugin tests (unit + integration).
       - name: Run plugin tests
         working-directory: ${{ env.REDMINE_DIR }}
         run: bundle exec rake redmine:plugins:test NAME=redmine_expert_helpdesk

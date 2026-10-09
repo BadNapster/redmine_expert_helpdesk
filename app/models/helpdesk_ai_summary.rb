@@ -1,7 +1,7 @@
-# Protokolleintrag einer KI-Zusammenfassung (Provider/Modell + Token-Verbrauch),
-# verknuepft mit der erzeugten privaten Journal-Notiz. Bewusst KEIN Activity-Provider
-# (im Gegensatz zu HelpdeskMessage) – die Zusammenfassung soll den Aktivitaets-Feed
-# nicht zumuellen; der Eintrag dient nur der Token-Anzeige im Journal-Header.
+# Log entry of an AI summary (provider/model + token usage), linked to the
+# generated private journal note. Deliberately NOT an activity provider (unlike
+# HelpdeskMessage) – the summary must not pollute the activity feed; the entry
+# only serves the token display in the journal header.
 class HelpdeskAiSummary < HelpdeskApplicationRecord
   belongs_to :issue
   belongs_to :journal, :optional => true

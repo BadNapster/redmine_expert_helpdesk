@@ -1,11 +1,11 @@
-# Laedt die PhishTank-Datenbank (online-valid.json.gz) herunter und
-# spiegelt sie in die Tabelle helpdesk_phishing_urls (Quelle: 'phishtank').
+# Downloads the PhishTank database (online-valid.json.gz) and
+# mirrors it into the helpdesk_phishing_urls table (source: 'phishtank').
 #
-# Ohne App-Key wird der anonyme Endpunkt verwendet (strengeres Rate-Limit,
-# Intervall nicht unter 1 Stunde waehlen). PhishTank verlangt einen
-# aussagekraeftigen User-Agent im Format "phishtank/<name>".
+# Without an app key the anonymous endpoint is used (stricter rate limit,
+# do not choose an interval below 1 hour). PhishTank requires a
+# meaningful user agent in the format "phishtank/<name>".
 #
-# Orchestrierung (Intervall, Lock, mehrere Feeds): PhishingFeeds.
+# Orchestration (interval, lock, multiple feeds): PhishingFeeds.
 
 require 'net/http'
 require 'uri'
@@ -15,8 +15,8 @@ require 'stringio'
 
 module RedmineExpertHelpdesk
   class PhishtankSync
-    # Voreingestellte Feed-URL; {key} wird durch den App-Key ersetzt (falls vorhanden).
-    # Ohne Key wird das Pfadsegment "/{key}" komplett entfernt (anonymer Endpunkt).
+    # Preset feed URL; {key} is replaced by the app key (if present).
+    # Without a key the "/{key}" path segment is removed completely (anonymous endpoint).
     DEFAULT_FEED_URL = 'https://data.phishtank.com/data/{key}/online-valid.json.gz'.freeze
     USER_AGENT = 'phishtank/redmine-expert-helpdesk'.freeze
     SOURCE     = 'phishtank'.freeze
@@ -28,27 +28,27 @@ module RedmineExpertHelpdesk
       @feed_url_template = feed_url_template.to_s.strip
     end
 
-    # Download + Voll-Import der Quelle 'phishtank' in einer Transaktion.
-    # Bei Fehlern bleiben die alten Daten unveraendert erhalten.
+    # Download + full import of the source 'phishtank' in one transaction.
+    # On errors the old data remains unchanged.
     def run
       entries = fetch_entries
-      raise SyncError, 'PhishTank-Feed ist leer' if entries.empty?
+      raise SyncError, 'PhishTank feed is empty' if entries.empty?
 
       rows = build_rows(entries, Time.current)
       count = HelpdeskPhishingUrl.replace_source!(SOURCE, rows)
 
-      Rails.logger.info "Helpdesk: PhishTank-Sync abgeschlossen – #{count} URLs importiert"
+      Rails.logger.info "Helpdesk: PhishTank sync finished – #{count} URLs imported"
       count
     rescue SyncError, StandardError => e
-      Rails.logger.error "Helpdesk: PhishTank-Sync fehlgeschlagen: #{e.message}"
+      Rails.logger.error "Helpdesk: PhishTank sync failed: #{e.message}"
       raise SyncError, e.message
     end
 
     private
 
-    # Baut die effektive Feed-URL aus der konfigurierten Vorlage:
-    # - {key} wird durch den App-Key ersetzt
-    # - ohne App-Key wird das Pfadsegment "/{key}" entfernt (anonymer Endpunkt)
+    # Builds the effective feed URL from the configured template:
+    # - {key} is replaced by the app key
+    # - without an app key the "/{key}" path segment is removed (anonymous endpoint)
     def feed_url
       template = @feed_url_template.presence || DEFAULT_FEED_URL
       if @app_key.present?
@@ -59,7 +59,7 @@ module RedmineExpertHelpdesk
     end
 
     def fetch_entries(redirect_limit = 3)
-      raise SyncError, 'Zu viele Redirects beim PhishTank-Download' if redirect_limit.zero?
+      raise SyncError, 'Too many redirects while downloading from PhishTank' if redirect_limit.zero?
 
       uri = URI.parse(@redirect_url || feed_url)
       http = Net::HTTP.new(uri.host, uri.port)
@@ -79,9 +79,9 @@ module RedmineExpertHelpdesk
         @redirect_url = response['location']
         fetch_entries(redirect_limit - 1)
       when Net::HTTPTooManyRequests
-        raise SyncError, 'PhishTank-Rate-Limit erreicht (HTTP 429) – Intervall erhoehen'
+        raise SyncError, 'PhishTank rate limit reached (HTTP 429) – increase the interval'
       else
-        raise SyncError, "PhishTank-Download fehlgeschlagen (HTTP #{response.code})"
+        raise SyncError, "PhishTank download failed (HTTP #{response.code})"
       end
     end
 
@@ -89,13 +89,13 @@ module RedmineExpertHelpdesk
       json = Zlib::GzipReader.new(StringIO.new(body)).read
       JSON.parse(json)
     rescue Zlib::GzipFile::Error
-      # Feed kam unkomprimiert (Content-Negotiation) – direkt parsen
+      # Feed arrived uncompressed (content negotiation) – parse directly
       JSON.parse(body)
     rescue JSON::ParserError => e
-      raise SyncError, "PhishTank-Feed nicht lesbar: #{e.message}"
+      raise SyncError, "PhishTank feed unreadable: #{e.message}"
     end
 
-    # Baut insert_all-Rows; Duplikate (gleicher Hash) werden uebersprungen.
+    # Builds insert_all rows; duplicates (same hash) are skipped.
     def build_rows(entries, now)
       seen = {}
       entries.each_with_object([]) do |entry, rows|

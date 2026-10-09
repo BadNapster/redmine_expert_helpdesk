@@ -1,11 +1,11 @@
-# Laedt den Phishing.Database-Feed (github.com/Phishing-Database/Phishing.Database)
-# herunter und spiegelt ihn in die Tabelle helpdesk_phishing_urls
-# (Quelle: 'phishing_database').
+# Downloads the Phishing.Database feed (github.com/Phishing-Database/Phishing.Database)
+# and mirrors it into the helpdesk_phishing_urls table
+# (source: 'phishing_database').
 #
-# Der Feed ist eine Plain-Text-Liste (eine URL pro Zeile, aktive Phishing-Links,
-# per PyFunceble validiert). Kein API-Key erforderlich.
+# The feed is a plain text list (one URL per line, active phishing links,
+# validated by PyFunceble). No API key required.
 #
-# Orchestrierung (Intervall, Lock, mehrere Feeds): PhishingFeeds.
+# Orchestration (interval, lock, multiple feeds): PhishingFeeds.
 
 require 'net/http'
 require 'uri'
@@ -24,19 +24,19 @@ module RedmineExpertHelpdesk
       @feed_url = feed_url.to_s.strip
     end
 
-    # Download + Voll-Import der Quelle 'phishing_database' in einer Transaktion.
-    # Bei Fehlern bleiben die alten Daten unveraendert erhalten.
+    # Download + full import of the source 'phishing_database' in one transaction.
+    # On errors the old data remains unchanged.
     def run
       body = fetch_body
       rows = build_rows(body, Time.current)
-      raise SyncError, 'Phishing.Database-Feed ist leer' if rows.empty?
+      raise SyncError, 'Phishing.Database feed is empty' if rows.empty?
 
       count = HelpdeskPhishingUrl.replace_source!(SOURCE, rows)
 
-      Rails.logger.info "Helpdesk: Phishing.Database-Sync abgeschlossen – #{count} URLs importiert"
+      Rails.logger.info "Helpdesk: Phishing.Database sync finished – #{count} URLs imported"
       count
     rescue SyncError, StandardError => e
-      Rails.logger.error "Helpdesk: Phishing.Database-Sync fehlgeschlagen: #{e.message}"
+      Rails.logger.error "Helpdesk: Phishing.Database sync failed: #{e.message}"
       raise SyncError, e.message
     end
 
@@ -47,7 +47,7 @@ module RedmineExpertHelpdesk
     end
 
     def fetch_body(redirect_limit = 3)
-      raise SyncError, 'Zu viele Redirects beim Phishing.Database-Download' if redirect_limit.zero?
+      raise SyncError, 'Too many redirects while downloading from Phishing.Database' if redirect_limit.zero?
 
       uri = URI.parse(@redirect_url || feed_url)
       http = Net::HTTP.new(uri.host, uri.port)
@@ -67,13 +67,13 @@ module RedmineExpertHelpdesk
         @redirect_url = response['location']
         fetch_body(redirect_limit - 1)
       when Net::HTTPTooManyRequests
-        raise SyncError, 'Phishing.Database-Rate-Limit erreicht (HTTP 429) – Intervall erhoehen'
+        raise SyncError, 'Phishing.Database rate limit reached (HTTP 429) – increase the interval'
       else
-        raise SyncError, "Phishing.Database-Download fehlgeschlagen (HTTP #{response.code})"
+        raise SyncError, "Phishing.Database download failed (HTTP #{response.code})"
       end
     end
 
-    # Antwort ggf. entpacken (GitHub liefert je nach Header gzip-komprimiert).
+    # Decompress the response if needed (GitHub delivers gzip-compressed depending on header).
     def decompress(response)
       body = response.body.to_s
       if response['content-encoding'].to_s.include?('gzip') || body.start_with?("\x1f\x8b".b)
@@ -83,12 +83,12 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Eine URL pro Zeile; Leerzeilen und Kommentare ueberspringen,
-    # Zeilen ohne Schema als http:// interpretieren (Domain-Listen).
+    # One URL per line; skip blank lines and comments,
+    # interpret lines without a scheme as http:// (domain lists).
     def build_rows(body, now)
       seen = {}
-      # dup vor force_encoding: der Body darf eingefroren sein (z. B. im Test),
-      # und wir wollen die Eingabe des Aufrufers ohnehin nicht in-place aendern.
+      # dup before force_encoding: the body may be frozen (e.g. in tests),
+      # and we do not want to modify the caller's input in place anyway.
       normalized = body.to_s.dup.force_encoding('UTF-8').scrub(' ')
       normalized.split(/\r?\n/).each_with_object([]) do |line, rows|
         url = line.strip

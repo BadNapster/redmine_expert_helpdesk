@@ -107,7 +107,7 @@ module RedmineExpertHelpdesk
       hits = hits.select { |h| h[:score].to_f >= threshold }.first(top_k)
       hits.size >= min_results ? hits : []
     rescue => e
-      Rails.logger.warn("[helpdesk][kb] Retrieval fehlgeschlagen (Issue ##{issue.id}): #{e.message}")
+      Rails.logger.warn("[helpdesk][kb] Retrieval failed (Issue ##{issue.id}): #{e.message}")
       raise if raise_on_error
 
       []
@@ -157,7 +157,7 @@ module RedmineExpertHelpdesk
       [subject.to_s.strip, text].reject(&:blank?).join("\n")
     end
 
-    # Numbered "Problem:/Loesung:" lines for a prompt block.
+    # Numbered "Problem:/Solution:" lines for a prompt block.
     #
     # with_issue_ids is load-bearing, not cosmetic. The summary is internal and
     # names the ticket so the agent can follow it up; a customer-facing draft
@@ -167,7 +167,7 @@ module RedmineExpertHelpdesk
       hits.each_with_index.map do |h, i|
         p      = h[:payload] || {}
         origin = with_issue_ids ? " (Ticket ##{p['issue_id']})" : ''
-        "#{i + 1}.#{origin} Problem: #{p['problem']}\n   Loesung: #{p['solution']}"
+        "#{i + 1}.#{origin} Проблема: #{p['problem']}\n   Решение: #{p['solution']}"
       end.join("\n")
     end
 
@@ -199,8 +199,8 @@ module RedmineExpertHelpdesk
 
       [reordered, true]
     rescue => e
-      Rails.logger.warn("[helpdesk][kb] Reranking fehlgeschlagen (Issue ##{issue.id}), " \
-                        "Vektor-Reihenfolge bleibt: #{e.message}")
+      Rails.logger.warn("[helpdesk][kb] Reranking failed (Issue ##{issue.id}), " \
+                        "vector order kept: #{e.message}")
       [hits, false]
     end
 

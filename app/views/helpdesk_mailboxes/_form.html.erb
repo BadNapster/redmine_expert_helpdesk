@@ -1,4 +1,4 @@
-<%# Formular fuer Postfach-Konfiguration (neu/bearbeiten) %>
+<%# Form for mailbox configuration (new/edit) %>
 <%= stylesheet_link_tag 'helpdesk_mailbox_form', :plugin => 'redmine_expert_helpdesk' %>
 <%= error_messages_for @mailbox %>
 
@@ -85,7 +85,7 @@
     <input type="text" id="hd_source_folder" name="helpdesk_mailbox[source_folder]"
            value="<%= h(@mailbox.source_folder) %>" size="30"
            class="hd-folder-input" autocomplete="off">
-    <button type="button" id="hd_refresh_folders" title="Ordnerliste vom Postfach laden"><span class="icon icon-reload"><%= hd_icon_label('reload') %>Ordner laden</span></button>
+    <button type="button" id="hd_refresh_folders" title="<%= l(:title_helpdesk_load_folders) %>"><span class="icon icon-reload"><%= hd_icon_label('reload') %><%= l(:button_helpdesk_load_folders) %></span></button>
     <span id="hd_folder_status" style="font-size:0.9em;margin-left:6px;"></span>
   </p>
   <p>
@@ -109,7 +109,7 @@
            class="hd-folder-input" autocomplete="off">
     <em class="info"><%= l(:text_helpdesk_failed_folder_info) %></em>
   </p>
-  <%# Nur fuer IMAP-Postfaecher: Graph legt die gesendete Kopie selbst ab. %>
+  <%# Only for IMAP mailboxes: Graph stores the sent copy itself. %>
   <p id="hd_sent_folder_row">
     <label><%= l(:field_helpdesk_sent_folder) %></label>
     <input type="text" id="hd_sent_folder" name="helpdesk_mailbox[sent_folder]"
@@ -203,7 +203,7 @@
 
 <fieldset class="box tabular" id="hd_auth_fieldset">
   <legend><%= l(:label_helpdesk_oauth_settings) %></legend>
-  <%# Nur bei OAuth2 relevant: ein Passwort gehoert immer zum einzelnen Postfach. %>
+  <%# Only relevant for OAuth2: a password always belongs to the individual mailbox. %>
   <p id="hd_credentials_source_row">
     <label><%= l(:field_helpdesk_credentials_source) %></label>
     <%= select_tag 'helpdesk_mailbox[credentials_source]',
@@ -253,8 +253,8 @@
         <%= password_field_tag 'helpdesk_mailbox[oauth_client_secret]', '', :size => 40, :autocomplete => 'new-password' %>
         <em class="info"><%= l(:text_helpdesk_secret_blank_info) %></em>
       </p>
-      <%# Microsoft und Google liefern diese drei Werte ueber die Vorlage; nur
-          "Andere / selbst gehostet" braucht sie von Hand. %>
+      <%# Microsoft and Google supply these three values via the preset; only
+          "Other / self-hosted" needs them by hand. %>
       <div id="hd_oauth_urls">
         <p>
           <label><%= l(:field_helpdesk_oauth_authorize_url) %></label>
@@ -453,8 +453,8 @@
 
 <script>
 (function () {
-  // Live-Vorschau der effektiven Fusszeile (Kombination aus Postfach-Fusszeile
-  // und zentraler Signatur gemaess Fusszeilen-Modus, Makros unrendered).
+  // Live preview of the effective footer (combination of mailbox footer
+  // and central signature per the footer mode, macros unrendered).
   var preview    = document.getElementById('hd_footer_preview');
   var modeSelect = document.querySelector('select[name="helpdesk_mailbox[footer_mode]"]');
   var footerArea = document.getElementById('helpdesk_mailbox_reply_footer');
@@ -523,6 +523,21 @@
   var connCopy     = document.getElementById('hd_conn_copy');
   var connCopyLabel   = <%= raw l(:button_helpdesk_copy_error).to_json %>;
   var connCopiedLabel = <%= raw l(:notice_helpdesk_error_copied).to_json %>;
+  // Translated UI strings for the folder/connection JavaScript.
+  var folderUI = {
+    create:          <%= raw l(:label_helpdesk_create_folder).to_json %>,
+    showFolderList:  <%= raw l(:label_helpdesk_show_folder_list).to_json %>,
+    noFoldersLoaded: <%= raw l(:text_helpdesk_no_folders_loaded, :button => l(:button_helpdesk_load_folders)).to_json %>,
+    noFoldersPresent:<%= raw l(:text_helpdesk_no_folders_present).to_json %>,
+    loading:         <%= raw l(:text_helpdesk_loading_folders).to_json %>,
+    loaded:          <%= raw l(:text_helpdesk_folders_loaded).to_json %>,
+    errorPrefix:     <%= raw l(:label_helpdesk_error_prefix).to_json %>,
+    unknown:         <%= raw l(:label_helpdesk_unknown_error).to_json %>,
+    network:         <%= raw l(:error_helpdesk_network_error).to_json %>,
+    creating:        <%= raw l(:text_helpdesk_creating_folders).to_json %>,
+    confirmCreate:   <%= raw l(:text_helpdesk_confirm_create_folders).to_json %>,
+    createFailed:    <%= raw l(:error_helpdesk_folder_creation_failed).to_json %>
+  };
   var knownFolders = [];
 
   function setStatus(msg, color) {
@@ -557,7 +572,7 @@
     toggle.type = 'button';
     toggle.className = 'hd-combo-toggle';
     toggle.setAttribute('aria-expanded', 'false');
-    toggle.setAttribute('aria-label', 'Ordnerliste anzeigen');
+    toggle.setAttribute('aria-label', folderUI.showFolderList);
     // No glyph: the chevron is painted by the input's background, exactly like
     // a Redmine <select>. This button is only the hit area over it.
     wrap.appendChild(toggle);
@@ -610,8 +625,8 @@
       div.setAttribute('role', 'option');
       div.setAttribute('aria-selected', 'false');
       div.textContent = label;
-      // The label is not the value ("+ \"x\" anlegen" vs "x"), so keep the
-      // value with the element for the keyboard path.
+      // The created-folder label (with the folder name) is not the value, so
+      // keep the value with the element for the keyboard path.
       div.dataset.value = value;
       li.appendChild(div);
       // mousedown, not click: blur would close the list before click fires.
@@ -643,12 +658,12 @@
       if (!knownFolders.length) {
         var hint = document.createElement('li');
         hint.className = 'hd-combo-empty';
-        hint.textContent = 'Noch keine Ordner geladen – "Ordner laden" verwenden';
+        hint.textContent = folderUI.noFoldersLoaded;
         list.appendChild(hint);
       } else if (!matches.length && !typed) {
         var none = document.createElement('li');
         none.className = 'hd-combo-empty';
-        none.textContent = 'Keine Ordner vorhanden';
+        none.textContent = folderUI.noFoldersPresent;
         list.appendChild(none);
       }
 
@@ -656,7 +671,7 @@
       // compared against what is typed, not against the (possibly empty) filter.
       var exact = knownFolders.some(function (n) { return n.toLowerCase() === typed.toLowerCase(); });
       if (typed && !exact) {
-        addOption('+ "' + typed + '" anlegen', typed, 'hd-combo-create');
+        addOption('+ "' + typed + '" ' + folderUI.create, typed, 'hd-combo-create');
       }
     }
 
@@ -745,15 +760,15 @@
     function (input) { combos.push(buildCombo(input)); }
   );
 
-  // Der komplette Formularzustand wird mitgeschickt, damit der Server den
-  // Provider (Graph oder IMAP) samt Verbindungsdaten aufbauen kann, statt einer
-  // beliebigen Adresse zu vertrauen.
+  // The complete form state is sent along so the server can build the
+  // provider (Graph or IMAP) with its connection data, instead of trusting
+  // an arbitrary address.
   function formPayload() {
     var form = box.closest('form');
     var body = form ? new FormData(form) : new FormData();
-    // Beim Bearbeiten enthaelt das Formular Rails' verstecktes _method=put.
-    // Mitgeschickt wuerde daraus ein PUT auf die Member-Route und damit
-    // #update mit id="folders" - also ein 404 statt einer Ordnerliste.
+    // When editing, the form contains Rails' hidden _method=put.
+    // Sent along, that would become a PUT to the member route and thus
+    // #update with id="folders" - i.e. a 404 instead of a folder list.
     body.delete('_method');
     if (mailboxId) body.append('id', mailboxId);
     return body;
@@ -765,8 +780,8 @@
       headers: { 'X-CSRF-Token': csrfToken, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
       body: body
     }).then(function (r) {
-      // Ein Fehler-Status liefert oft HTML statt JSON. Den Status durchreichen,
-      // statt am Parser zu scheitern - sonst steht ueberall nur "Netzwerkfehler".
+      // An error status often returns HTML instead of JSON. Pass the status
+      // through instead of failing at the parser - otherwise all you get is "network error".
       return r.json()
         .catch(function () { return { error: 'HTTP ' + r.status + ' ' + r.statusText }; })
         .then(function (data) { return { ok: r.ok, data: data, statusText: r.statusText }; });
@@ -775,17 +790,17 @@
 
   function loadFolders(address) {
     if (!address) return;
-    setStatus('Lade Ordner\u2026', '#888');
+    setStatus(folderUI.loading, '#888');
     postJson(foldersUrl, formPayload())
       .then(function (res) {
         if (Array.isArray(res.data)) {
           populateDatalist(res.data);
-          setStatus(res.data.length + ' Ordner geladen', 'green');
+          setStatus(folderUI.loaded + ' ' + res.data.length, 'green');
         } else {
-          setStatus('Fehler: ' + (res.data.error || 'unbekannt'), 'red');
+          setStatus(folderUI.errorPrefix + ' ' + (res.data.error || folderUI.unknown), 'red');
         }
       })
-      .catch(function () { setStatus('Netzwerkfehler', 'red'); });
+      .catch(function () { setStatus(folderUI.network, 'red'); });
   }
 
   function createFolderRequest(address, name) {
@@ -797,14 +812,14 @@
     });
   }
 
-  // Sichtbarkeit der Provider-Abschnitte und Anmeldeblöcke
+  // Visibility of the provider sections and authentication blocks
   function syncVisibility() {
     var isImap = providerSel && providerSel.value === 'imap';
     [imapFs, smtpFs, authFs].forEach(function (el) {
       if (el) el.style.display = isImap ? '' : 'none';
     });
-    // Die Transportauswahl haengt am Anbieter und muss auch fuer ein
-    // Graph-Postfach stimmen - daher vor dem IMAP-Teil.
+    // The transport selection depends on the provider and must also be correct
+    // for a Graph mailbox - hence before the IMAP part.
     syncTransport(isImap);
     if (!isImap) return;
 
@@ -814,16 +829,16 @@
 
     var grant = grantSel ? grantSel.value : 'client_credentials';
     if (saBlock) saBlock.style.display = grant === 'jwt_bearer' ? '' : 'none';
-    // Der Consent-Block bleibt auch bei globalen Zugangsdaten sichtbar: das
-    // Refresh-Token gehört zum Postfach, nicht zur App-Registrierung.
+    // The consent block stays visible even with global credentials: the
+    // refresh token belongs to the mailbox, not to the app registration.
     if (consentBlock) consentBlock.style.display = grant === 'authorization_code' ? '' : 'none';
 
-    // Die Herkunft der Zugangsdaten betrifft nur die App-Registrierung; ein
-    // Passwort gehört immer zum einzelnen Postfach.
+    // Where the credentials come from only concerns the app registration; a
+    // password always belongs to the individual mailbox.
     if (sourceRow) sourceRow.style.display = oauth ? '' : 'none';
 
-    // Bei "aus den Plugin-Einstellungen" werden die eigenen Felder komplett
-    // ignoriert - sie stehen zu lassen, hieße zwei Wahrheiten anzuzeigen.
+    // With "from the plugin settings", the mailbox's own fields are completely
+    // ignored - leaving them visible would show two truths at once.
     var ownCredentials = !sourceSel || sourceSel.value === 'mailbox';
     if (credentialsBlock) credentialsBlock.style.display = ownCredentials ? '' : 'none';
 
@@ -834,16 +849,16 @@
     if (sentFolderRow) sentFolderRow.style.display = isImap ? '' : 'none';
   }
 
-  // Graph nur fuer ein Postfach, das Microsoft auch hostet - sonst schickt der
-  // Versand ein sendMail an ein Postfach, das dort nicht existiert - und nur,
-  // wenn die zentrale App-Registrierung ueberhaupt gepflegt ist; sonst waere es
-  // ein Weg, der erst beim Senden scheitert. Spiegelt
+  // Graph only for a mailbox that Microsoft actually hosts - otherwise sending
+  // would deliver sendMail to a mailbox that does not exist there - and only
+  // if the central app registration is maintained at all; otherwise it would
+  // be a path that only fails at send time. Mirrors
   // HelpdeskMailbox#graph_transport_available?.
   function syncTransport(isImap) {
     if (!transportSel) return;
 
-    // Bei Zugangsdaten aus den Plugin-Einstellungen zaehlt deren Vorlage, nicht
-    // das dann ausgeblendete Feld am Postfach.
+    // With credentials from the plugin settings, their preset counts, not
+    // the then-hidden field on the mailbox.
     var ownCredentials  = sourceSel && sourceSel.value === 'mailbox';
     var preset          = (ownCredentials && presetSel) ? presetSel.value
                                                         : transportSel.dataset.globalPreset;
@@ -853,12 +868,12 @@
     if (graphOption) {
       graphOption.hidden   = !microsoftHosted;
       graphOption.disabled = !microsoftHosted;
-      // Eine unerlaubte Auswahl still stehen zu lassen, hiesse den Fehler bis
-      // zum Speichern zu verstecken.
+      // Leaving an invalid selection in place would hide the error
+      // until the mailbox is saved.
       if (!microsoftHosted && transportSel.value === 'graph') transportSel.value = 'provider';
     }
 
-    // Das eigene Backend heisst je nach Anbieter anders; "Provider" sagt niemandem etwas.
+    // The own backend is named differently per provider; "Provider" tells nobody anything.
     var own = transportSel.querySelector('option[value="provider"]');
     if (own) {
       own.textContent = isImap ? transportSel.dataset.labelSmtp : transportSel.dataset.labelGraph;
@@ -877,7 +892,7 @@
     }
   }
 
-  // Vorlage füllt ausschließlich leere Felder - eingetragene Werte bleiben stehen.
+  // The preset only fills empty fields - entered values stay as they are.
   function applyPreset() {
     if (!presetSel || !presets) return;
     var preset = presets[presetSel.value];
@@ -979,8 +994,8 @@
       postJson(testUrl, formPayload())
         .then(function (res) {
           var text = res.data.message || (res.data.ok ? 'OK' : '');
-          // Den erkannten Gesendet-Ordner mitzeigen: ein falscher Treffer faellt
-          // sonst erst nach der ersten Antwort im Log auf.
+          // Also show the detected sent folder: a wrong hit would otherwise only
+          // surface in the log after the first reply.
           if (res.data.ok && res.data.sent_folder) {
             text += ' – ' + res.data.sent_folder;
           }
@@ -988,31 +1003,31 @@
           if (res.data.ok && Array.isArray(res.data.folders)) populateDatalist(res.data.folders);
         })
         .catch(function () {
-          showConnStatus('Netzwerkfehler', 'red');
+          showConnStatus(folderUI.network, 'red');
         });
     });
   }
 
-  // Ordner laden sobald Adresse vorhanden (z. B. beim Bearbeiten)
+  // Load folders as soon as an address is present (e.g. when editing)
   if (addrInput && addrInput.value.trim()) {
     loadFolders(addrInput.value.trim());
   }
 
-  // Ordner neu laden wenn Postfachadresse geaendert wird
+  // Reload folders when the mailbox address changes
   if (addrInput) {
     addrInput.addEventListener('change', function () {
       loadFolders(this.value.trim());
     });
   }
 
-  // Refresh-Button
+  // Refresh button
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function () {
       loadFolders(addrInput ? addrInput.value.trim() : '');
     });
   }
 
-  // Beim Absenden: fehlende Ordner anlegen
+  // On submit: create missing folders
   var form = box.closest('form');
   if (form) {
     form.addEventListener('submit', function (e) {
@@ -1029,17 +1044,17 @@
       if (toCreate.length === 0) return;
 
       e.preventDefault();
-      var names = toCreate.map(function (n) { return '\u201e' + n + '\u201c'; }).join(', ');
-      if (!confirm('Die Ordner ' + names + ' existieren noch nicht. Jetzt im Postfach anlegen?')) return;
+      var names = toCreate.map(function (n) { return '\u00ab' + n + '\u00bb'; }).join(', ');
+      if (!confirm(folderUI.confirmCreate.replace('%{names}', names))) return;
 
-      setStatus('Erstelle Ordner\u2026', '#888');
+      setStatus(folderUI.creating, '#888');
       toCreate.reduce(function (chain, name) {
         return chain.then(function () { return createFolderRequest(address, name); });
       }, Promise.resolve())
         .then(function () { form.submit(); })
         .catch(function (err) {
-          setStatus('Fehler: ' + err.message, 'red');
-          alert('Ordner konnte nicht erstellt werden:\n' + err.message);
+          setStatus(folderUI.errorPrefix + ' ' + err.message, 'red');
+          alert(folderUI.createFailed + '\n' + err.message);
         });
     });
   }

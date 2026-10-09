@@ -1,12 +1,12 @@
 /*
- * Aktivitaets-Feed-Icons fuer Helpdesk-Nachrichten.
- * Redmine 5.x verwendet CSS-Klassen (icon-{event_type}) mit background-image.
- * Quellen: Bootstrap Icons v1.11 (MIT License, https://icons.getbootstrap.com/)
- * SVGs verwenden viewBox="0 0 16 18" (2 Einheiten Puffer unten), damit der
- * Pfeil-Kreis am unteren Rand nicht abgeschnitten wird.
+ * Activity feed icons for Helpdesk messages.
+ * Redmine 5.x uses CSS classes (icon-{event_type}) with background-image.
+ * Sources: Bootstrap Icons v1.11 (MIT License, https://icons.getbootstrap.com/)
+ * The SVGs use viewBox="0 0 16 18" (2 units of padding at the bottom) so that
+ * the arrow circle at the bottom edge is not clipped.
  */
 
-/* SLA-Anzeige am Ticket (Ampel-Chips fuer Reaktions-/Loesungszeit) */
+/* SLA display on the ticket (traffic-light chips for reaction/solution time) */
 .helpdesk-sla-box {
   display: flex;
   align-items: center;
@@ -31,14 +31,14 @@
 .hd-sla-warning  { background: #fff3cd; border-color: #e0a800; color: #7a5c00; }
 .hd-sla-breached { background: #fce4e4; border-color: #e0a0a0; color: #a01818; font-weight: bold; }
 
-/* --- "Wartet auf Bearbeitung" --- */
-/* Linker Marker statt Hintergrundfarbe: Redmine faerbt Zeilenhintergruende bereits
-   nach Prioritaet, und .closed/.overdue wuerden mit einer Hintergrundregel kollidieren. */
+/* --- "Awaiting Agent" --- */
+/* Left marker instead of a background colour: Redmine already colours row
+   backgrounds by priority, and .closed/.overdue would clash with a background rule. */
 tr.issue.hd-awaiting td:first-child { box-shadow: inset 3px 0 0 #e0a800; }
 .hd-awaiting-chip { background: #fff3cd; border-color: #e0a800; color: #7a5c00; }
 .hd-awaiting-counter { margin: 0 0 1em; }
 
-/* --- SLA-Statistik-Seite (CSS-Balkendiagramme, keine externen Libs) --- */
+/* --- SLA statistics page (CSS bar charts, no external libs) --- */
 .hd-stats-filter { margin: 0 0 1em; padding: 8px; background: #f6f6f6; border: 1px solid #e0e0e0; border-radius: 3px; }
 .hd-stats-filter label { margin-right: 12px; }
 
@@ -50,7 +50,7 @@ tr.issue.hd-awaiting td:first-child { box-shadow: inset 3px 0 0 #e0a800; }
 .hd-stats-lbl { font-size: 0.82em; color: #666; }
 .hd-stats-lbl em { color: #999; font-style: normal; }
 
-/* Chart.js-Container: feste Hoehe, responsiv in der Breite */
+/* Chart.js container: fixed height, responsive width */
 .hd-chart-box { position: relative; width: 100%; height: 300px; margin: 0 0 1.2em; }
 .hd-chart-box-sm { height: 180px; }
 .hd-chart-box canvas { max-width: 100%; }
@@ -72,11 +72,11 @@ tr.issue.hd-awaiting td:first-child { box-shadow: inset 3px 0 0 #e0a800; }
 .hd-stats-table th.hd-sort-desc::after { content: ' \25BE'; }
 
 /*
- * Aktivitaets-Feed-Richtungsicons: ab Redmine 6 werden sie als SVG-Sprite gerendert
- * (activity_event_type_icon -> sprite_icon aus assets/icons.svg, fill="currentColor").
- * Hier nur noch die Richtungsfarbe je Uhr setzen (gruen eingehend / rot ausgehend /
- * grau Erstkontakt). Die alten background-image-Klassen entfielen, da sie unter
- * Redmine 6+ ohne background-repeat:no-repeat kachelten.
+ * Activity feed direction icons: as of Redmine 6 they are rendered as an SVG sprite
+ * (activity_event_type_icon -> sprite_icon from assets/icons.svg, fill="currentColor").
+ * Only the direction colour per clock is set here (green incoming / red outgoing /
+ * grey first contact). The old background-image classes are gone because under
+ * Redmine 6+ they tiled without background-repeat:no-repeat.
  */
 div#activity dt.icon-helpdesk-message-in   svg.icon-svg { color: #2e7d32; fill: currentColor; stroke: none; }
 div#activity dt.icon-helpdesk-message-out  svg.icon-svg { color: #4a90c7; fill: currentColor; stroke: none; }

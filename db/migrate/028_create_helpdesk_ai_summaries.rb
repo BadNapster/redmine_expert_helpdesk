@@ -1,6 +1,6 @@
-# Protokoll je erzeugter KI-Zusammenfassung: verknuepft die private Journal-Notiz
-# mit dem verwendeten Provider/Modell und dem Token-Verbrauch. Wird genutzt, um im
-# Journal-Header (analog zu den Empfaenger-Badges) die Token-Zahl anzuzeigen.
+# Log entry per generated AI summary: links the private journal note
+# with the provider/model used and the token usage. Used to show the
+# token count in the journal header (analogous to the recipient badges).
 class CreateHelpdeskAiSummaries < ActiveRecord::Migration[6.1]
   def change
     return if table_exists?(:helpdesk_ai_summaries)

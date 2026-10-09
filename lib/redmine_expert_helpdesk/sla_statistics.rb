@@ -1,18 +1,18 @@
-# Aggregiert Kennzahlen fuer die SLA-Statistik-Seite eines Projekts.
+# Aggregates the figures for the SLA statistics page of a project.
 #
-# Basis: SLA-relevante Tickets (Helpdesk-Tickets mit HelpdeskTicketInfo, erstellt
-# ab sla_enabled_at). Gruppierung nach Tag/Woche/Monat/Jahr; Zeit-Buckets und
-# "Stosszeiten" verwenden die lokale Serverzeit (konsistent mit BusinessHours).
+# Basis: SLA-relevant tickets (helpdesk tickets with a HelpdeskTicketInfo, created
+# from sla_enabled_at on). Grouping by day/week/month/year; time buckets and
+# "peak times" use the local server time (consistent with BusinessHours).
 #
-# Liefert reine Ruby-Datenstrukturen (to_h) ohne Rendering-Logik, damit die
-# Aggregation isoliert testbar bleibt.
+# Returns pure Ruby data structures (to_h) without rendering logic, so that
+# the aggregation stays testable in isolation.
 module RedmineExpertHelpdesk
   class SlaStatistics
     include StatisticsSupport
 
     PERIODS = StatisticsSupport::PERIODS
 
-    # Eine ausgewertete Ticket-Zeile (Spalten-Reihenfolge = pluck unten).
+    # One evaluated ticket row (column order = pluck below).
     Row = Struct.new(:id, :created_on, :closed_on, :first_response_at,
                      :reaction_minutes, :solution_minutes,
                      :reaction_due_at, :reaction_warn_at,
@@ -26,8 +26,8 @@ module RedmineExpertHelpdesk
       @date_from, @date_to = @date_to, @date_from if @date_from > @date_to
 
       @setting = HelpdeskProjectSetting.for_project(project)
-      @from_t  = @date_from.to_time            # lokale Mitternacht (Start inkl.)
-      @to_t    = (@date_to + 1).to_time        # lokale Mitternacht Folgetag (Ende exkl.)
+      @from_t  = @date_from.to_time            # local midnight (start, inclusive)
+      @to_t    = (@date_to + 1).to_time        # local midnight of next day (end, exclusive)
     end
 
     def to_h
@@ -48,7 +48,7 @@ module RedmineExpertHelpdesk
 
     private
 
-    # SLA-relevante Tickets des Projekts, erstellt im gewaehlten Zeitraum.
+    # SLA-relevant tickets of the project, created in the selected period.
     def base_scope
       scope = Issue
                 .joins("INNER JOIN helpdesk_ticket_infos ti ON ti.issue_id = #{Issue.quoted_table_name}.id")
@@ -84,10 +84,10 @@ module RedmineExpertHelpdesk
 
     def totals(rows)
       closed = rows.count { |r| r.closed_on }
-      # "Offen ueberschritten": nur OFFENE Tickets, deren Reaktions- oder
-      # Loesungsuhr aktuell offen ueberschritten ist. Geschlossene Tickets zaehlen
-      # hier nie (ihre Reaktionsuhr kann ohne erfasste Erstreaktion faelschlich als
-      # offen erscheinen).
+      # "Openly breached": only OPEN tickets whose reaction or
+      # solution clock is currently openly breached. Closed tickets never count
+      # here (their reaction clock can wrongly appear open without a recorded
+      # first reaction).
       breached_open = rows.count do |r|
         r.closed_on.nil? && (reaction_status(r) == :breached || solution_status(r) == :breached)
       end
@@ -95,9 +95,9 @@ module RedmineExpertHelpdesk
         :closed => closed, :breached_open => breached_open }
     end
 
-    # Erstellte je Bucket; geschlossene je Bucket (nur Tickets, die im Zeitraum
-    # erstellt UND geschlossen wurden). Liefert eine geordnete Serie inkl. leerer
-    # Buckets, damit die Balken luecklos sind.
+    # Created per bucket; closed per bucket (only tickets that were created AND
+    # closed within the period). Returns an ordered series including empty
+    # buckets, so the bars are gapless.
     def volume_series(rows)
       created = Hash.new(0)
       closed  = Hash.new(0)
@@ -134,7 +134,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Ampel-Zaehlung je Uhr plus Erfuellungsquote (nur abgeschlossene Uhren).
+    # Traffic-light count per clock plus fulfillment rate (completed clocks only).
     def compliance(rows)
       { :reaction => clock_compliance(rows) { |r| reaction_status(r) },
         :solution => clock_compliance(rows) { |r| solution_status(r) } }
@@ -145,9 +145,9 @@ module RedmineExpertHelpdesk
       rows.each do |r|
         status = yield(r)
         next if status.nil?
-        # Offene Uhr-Zustaende (laufend/Warnung/offen ueberschritten) nur fuer
-        # OFFENE Tickets zaehlen. Bei geschlossenen Tickets ohne abgeschlossene Uhr
-        # (z. B. nie beantwortet) ist das eine Tracking-Luecke, kein offener Verstoß.
+        # Open clock states (running/warning/openly breached) only count for
+        # OPEN tickets. For closed tickets without a completed clock
+        # (e.g. never answered) this is a tracking gap, not an open violation.
         next if r.closed_on && [:running, :warning, :breached].include?(status)
         counts[status] += 1
       end
@@ -169,12 +169,12 @@ module RedmineExpertHelpdesk
       StatisticsSupport.hour_histogram(message_times)
     end
 
-    # ISO-Wochentage 1=Mo .. 7=So.
+    # ISO weekdays 1=Mo .. 7=Su.
     def busiest_weekdays
       StatisticsSupport.weekday_histogram(message_times)
     end
 
-    # Zeitpunkte eingehender Nachrichten SLA-relevanter Tickets im Zeitraum.
+    # Timestamps of incoming messages of SLA-relevant tickets in the period.
     def message_times
       return @message_times if defined?(@message_times)
 
@@ -192,17 +192,17 @@ module RedmineExpertHelpdesk
                          .compact
     end
 
-    # --- Buckets (Implementierung in StatisticsSupport) ----------------------
+    # --- Buckets (implemented in StatisticsSupport) --------------------------
 
-    # Klassenmethoden bleiben als Delegates erhalten (Tests, AiUsageStatistics).
+    # Class methods remain as delegates (tests, AiUsageStatistics).
     def self.bucket_key(time, period)
       StatisticsSupport.bucket_key(time, period)
     end
 
-    # --- Ausgabe-Helfer ------------------------------------------------------
+    # --- Output helpers ------------------------------------------------------
 
-    # Reaktion endet spaetestens beim Schliessen: ohne erfasste Erstreaktion gilt
-    # bei geschlossenen Tickets der Schliesszeitpunkt als Abschluss.
+    # Reaction ends at the latest on close: for closed tickets without a recorded
+    # first reaction, the closing time counts as completion.
     def reaction_status(r)
       done = r.first_response_at || r.closed_on
       Sla.clock_status_from(r.reaction_due_at, r.reaction_warn_at, done)

@@ -1,7 +1,7 @@
-<%# Zentraler Mail-Zugang. Es gibt genau EINE App-Registrierung - dieselbe, die
-    der Graph-Provider seit jeher nutzt. Welche Felder darunter sichtbar sind,
-    haengt an der Vorlage bzw. am OAuth2-Verfahren, damit jeder Anbietertyp nur
-    das sieht, was er wirklich braucht. %>
+<%# Central mail access. There is exactly ONE app registration - the same one
+    the Graph provider has always used. Which fields are visible below depends
+    on the preset or the OAuth2 flow, so each provider type only sees
+    what it actually needs. %>
 <fieldset class="box tabular" id="hd_settings_mail">
   <legend><%= l(:label_helpdesk_default_mail_credentials) %></legend>
   <p>
@@ -37,8 +37,8 @@
     <em class="info"><%= l(:text_helpdesk_global_app_registration_info) %></em>
   </p>
 
-  <%# Vorlagen fuer Microsoft/Google liefern Hosts und URLs selbst; nur bei
-      "Andere / selbst gehostet" muss der Betreiber sie angeben. %>
+  <%# Microsoft/Google presets supply hosts and URLs themselves; only with
+      "Other / self-hosted" does the operator have to provide them. %>
   <div id="hd_s_generic_block">
     <p>
       <label><%= l(:field_helpdesk_imap_host) %></label>
@@ -76,7 +76,7 @@
     </p>
   </div>
 
-  <%# Nur das Verfahren "Einmalige Zustimmung" fuehrt ueber eine Redirect-URI. %>
+  <%# Only the "one-time consent" flow uses a redirect URI. %>
   <div id="hd_s_consent_block">
     <p>
       <label><%= l(:label_helpdesk_oauth_callback_url) %></label>
@@ -88,9 +88,9 @@
   <div class="wiki" id="hd_s_azure_hints" style="margin-top:1em;">
     <strong><%= l(:label_helpdesk_azure_hints) %></strong>
     <ul>
-      <li>Graph-Postf&auml;cher: Application-Permissions <code>Mail.ReadWrite</code>, <code>Mail.Send</code> (Admin-Consent erforderlich)</li>
-      <li>IMAP/SMTP-Postf&auml;cher (nur Anwendung): <code>IMAP.AccessAsApp</code>, <code>SMTP.SendAsApp</code></li>
-      <li>Zugriff per <code>ApplicationAccessPolicy</code> auf die Helpdesk-Postf&auml;cher einschr&auml;nken</li>
+      <li><%= raw l(:text_helpdesk_azure_hint_graph) %></li>
+      <li><%= raw l(:text_helpdesk_azure_hint_imap) %></li>
+      <li><%= raw l(:text_helpdesk_azure_hint_policy) %></li>
     </ul>
   </div>
 
@@ -245,8 +245,8 @@
 
 <script type="text/javascript">
 //<![CDATA[
-// Blendet die Felder aus, die die gewaehlte Vorlage bzw. das Verfahren selbst
-// liefert - so bleibt genau das stehen, was der Betreiber eintragen muss.
+// Hides the fields that the selected preset or the flow itself supplies -
+// so exactly what the operator has to enter remains.
 (function () {
   var presetSel = document.getElementById('hd_s_preset');
   var grantSel  = document.getElementById('hd_s_grant');

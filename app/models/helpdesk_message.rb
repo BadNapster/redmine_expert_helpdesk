@@ -1,5 +1,5 @@
-# Nachrichtenverlauf eines Tickets (eingehend und ausgehend),
-# inklusive Message-ID fuer das E-Mail-Threading.
+# Message history of a ticket (inbound and outbound),
+# including the message ID for e-mail threading.
 class HelpdeskMessage < HelpdeskApplicationRecord
   belongs_to :issue
   belongs_to :helpdesk_contact, :optional => true
@@ -14,7 +14,7 @@ class HelpdeskMessage < HelpdeskApplicationRecord
   scope :incoming, -> { where(:direction => 'in') }
   scope :outgoing, -> { where(:direction => 'out') }
 
-  # Sichtbarkeit fuer Abfragen ausserhalb des Aktivitaets-Feeds
+  # Visibility for queries outside the activity feed
   scope :visible, lambda { |*args|
     user    = args.shift || User.current
     options = args.shift || {}
@@ -22,7 +22,7 @@ class HelpdeskMessage < HelpdeskApplicationRecord
       .where(Issue.visible_condition(user, options))
   }
 
-  # Aktivitaets-Feed: Ereignisdarstellung
+  # Activity feed: event representation
   acts_as_event(
     :title    => Proc.new { |m|
       subject = m.subject.presence || (m.issue ? m.issue.subject : '?')
@@ -38,7 +38,7 @@ class HelpdeskMessage < HelpdeskApplicationRecord
     :group       => :issue
   )
 
-  # Aktivitaets-Feed: Datenbankabfrage und Zugriffssteuerung
+  # Activity feed: database query and access control
   acts_as_activity_provider(
     :type       => 'helpdesk_messages',
     :timestamp  => "#{table_name}.created_at",
@@ -46,7 +46,7 @@ class HelpdeskMessage < HelpdeskApplicationRecord
     :scope      => proc { joins(:issue => :project) }
   )
 
-  # Benoetigt von acts_as_event (recipients-Methode)
+  # Needed by acts_as_event (recipients method)
   def project
     issue&.project
   end

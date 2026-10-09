@@ -1,13 +1,13 @@
-# Vektor-Store fuer die Wissensbasis (RAG). Zwei austauschbare Backends hinter
-# einer gemeinsamen Schnittstelle, per zentraler Einstellung kb_backend gewaehlt:
-#   - qdrant   : externe REST-API (Net::HTTP, kein Zusatz-Gem), 1 Collection/Projekt
-#   - pgvector : externe Postgres-DB mit pgvector (benoetigt gem 'pg', gekapselt)
+# Vector store for the knowledge base (RAG). Two interchangeable backends behind
+# a shared interface, chosen via the central kb_backend setting:
+#   - qdrant   : external REST API (Net::HTTP, no extra gem), 1 collection/project
+#   - pgvector : external Postgres DB with pgvector (requires gem 'pg', encapsulated)
 #
-# Strikte Projekt-Isolation: jede Methode nimmt project_id als erstes Argument.
-# Qdrant isoliert ueber eine eigene Collection je Projekt; pgvector ueber ein
-# zwingendes  WHERE project_id = $1  auf dem einzigen Suchpfad.
+# Strict project isolation: every method takes project_id as its first argument.
+# Qdrant isolates via its own collection per project; pgvector via a mandatory
+#  WHERE project_id = $1  on the only search path.
 #
-# Einheitliche Rueckgabe von search:
+# Uniform return value of search:
 #   [ { :id => <entry_id>, :score => Float(0..1), :payload => { 'issue_id'=>, 'problem'=>, 'solution'=> } }, ... ]
 
 require 'net/http'
@@ -18,7 +18,7 @@ module RedmineExpertHelpdesk
   module KnowledgeStore
     class StoreError < StandardError; end
 
-    # Waehlt das Backend gemaess zentraler Einstellung kb_backend.
+    # Selects the backend according to the central kb_backend setting.
     def self.for(settings = nil)
       settings ||= Setting.plugin_redmine_expert_helpdesk
       case settings['kb_backend'].to_s
@@ -32,9 +32,9 @@ module RedmineExpertHelpdesk
       DEFAULT_OPEN_TIMEOUT = 10
       DEFAULT_READ_TIMEOUT = 30
 
-      # Ueberschreibbar, weil der Antwortentwurf synchron in einem Web-Request
-      # laeuft: dort sind 30 s Lesezeit fuer die Vektorsuche allein zu viel, in
-      # den Hintergrund-Jobs bleibt es beim bisherigen Wert.
+      # Overridable, because the answer draft runs synchronously in a web request:
+      # there, 30 s of read time for the vector search alone is too much, while
+      # the background jobs keep the previous value.
       attr_accessor :open_timeout, :read_timeout
 
       def initialize(settings)
@@ -55,7 +55,7 @@ module RedmineExpertHelpdesk
         "helpdesk_kb_p#{project_id.to_i}"
       end
 
-      # Legt die Collection an, falls sie fehlt (Vektorgroesse = Embedding-Dim).
+      # Creates the collection if it is missing (vector size = embedding dim).
       def ensure_ready!(project_id, dims)
         name = collection(project_id)
         res = request(:get, "/collections/#{name}", nil, :allow_404 => true)
@@ -113,12 +113,12 @@ module RedmineExpertHelpdesk
         response = http.request(req)
         return nil if allow_404 && response.is_a?(Net::HTTPNotFound)
         unless response.is_a?(Net::HTTPSuccess)
-          raise StoreError, "Qdrant-Anfrage fehlgeschlagen (HTTP #{response.code}): #{method.to_s.upcase} #{path} – #{response.body}"
+          raise StoreError, "Qdrant request failed (HTTP #{response.code}): #{method.to_s.upcase} #{path} – #{response.body}"
         end
 
         response.body.present? ? JSON.parse(response.body) : {}
       rescue JSON::ParserError => e
-        raise StoreError, "Qdrant-Antwort nicht lesbar: #{e.message}"
+        raise StoreError, "Qdrant response not readable: #{e.message}"
       end
     end
 
@@ -128,10 +128,10 @@ module RedmineExpertHelpdesk
 
       DEFAULT_CONNECT_TIMEOUT = 10
 
-      # Siehe QdrantStore: derselbe Regler, damit der synchrone Antwortentwurf
-      # ein Zeitbudget durchsetzen kann. PG.connect kennt von sich aus KEIN
-      # Limit - ein toter Host blockiert sonst bis zum TCP-Timeout des Systems,
-      # und das sind zwei Minuten an einem Puma-Thread.
+      # See QdrantStore: the same control, so the synchronous answer draft can
+      # enforce a time budget. PG.connect does not know a limit by itself - a dead
+      # host would otherwise block until the system's TCP timeout, which is two
+      # minutes on a Puma thread.
       attr_accessor :connect_timeout
 
       def initialize(settings)
@@ -139,8 +139,8 @@ module RedmineExpertHelpdesk
         @connect_timeout = DEFAULT_CONNECT_TIMEOUT
       end
 
-      # gem 'pg' ist optional (nur fuer dieses Backend). Fehlt es, gilt der Store
-      # als nicht konfiguriert und die Funktion degradiert (Fehler wird geloggt).
+      # gem 'pg' is optional (only for this backend). If it is missing, the store
+      # counts as not configured and the feature degrades (the error is logged).
       def pg_available?
         require 'pg'
         true
@@ -179,7 +179,7 @@ module RedmineExpertHelpdesk
         )
       end
 
-      # Projekt-Isolation: WHERE project_id = $1 ist auf dem einzigen Suchpfad zwingend.
+      # Project isolation: WHERE project_id = $1 is mandatory on the only search path.
       def search(project_id, vector, top_k)
         res = conn.exec_params(
           "SELECT entry_id, issue_id, problem, solution,
@@ -221,8 +221,8 @@ module RedmineExpertHelpdesk
         end
       end
 
-      # connect_timeout nur ergaenzen, wenn die konfigurierte URL keines mitbringt:
-      # ein ausdruecklich gesetzter Wert gehoert dem Betreiber.
+      # Add connect_timeout only when the configured URL does not carry one:
+      # an explicitly set value belongs to the operator.
       def connect_url
         url = @settings['kb_pg_url'].to_s.strip
         return url if url.include?('connect_timeout=')

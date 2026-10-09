@@ -1,12 +1,12 @@
-# Nimmt ein abgeschlossenes Ticket in die Wissensbasis auf: extrahiert
-# {Problem, Loesung} per KI, legt einen HelpdeskKnowledgeEntry an (auto -> approved,
-# manual -> pending) und indexiert approved-Eintraege im Vektor-Store.
-# Fehler brechen nichts ab (nur Logging), da async nach Ticket-Abschluss.
+# Ingests a closed ticket into the knowledge base: extracts {problem, solution}
+# via AI, creates a HelpdeskKnowledgeEntry (auto -> approved, manual -> pending)
+# and indexes approved entries in the vector store. Errors break nothing (only
+# logging), as this runs async after the ticket is closed.
 class HelpdeskKnowledgeIngestJob < ActiveJob::Base
   queue_as :default
 
-  # force: true = manuelle Aufnahme aus dem Ticket -> sofort approved+indexiert,
-  # unabhaengig vom Projekt-Modus.
+  # force: true = manual ingest from the ticket -> immediately approved+indexed,
+  # regardless of the project mode.
   # reextract: true = re-run the extraction of an existing entry (detail level
   # changed). Curated/rejected entries stay untouched and the entry keeps its
   # status: in 'manual' mode an approved entry would otherwise fall back to
@@ -99,11 +99,11 @@ class HelpdeskKnowledgeIngestJob < ActiveJob::Base
       HelpdeskKnowledgeEntry.unindex(entry)
     end
   rescue => e
-    Rails.logger.warn("[helpdesk][kb] Ingest fehlgeschlagen (Issue ##{issue_id}): #{e.class}: #{e.message}")
+    Rails.logger.warn("[helpdesk][kb] Ingest failed (Issue ##{issue_id}): #{e.class}: #{e.message}")
   end
 
-  # Von der manuellen Freigabe genutzt: bereits extrahierten Eintrag embedden und
-  # in den Vektor-Store schreiben (ohne erneuten LLM-Aufruf).
+  # Used by the manual release: embeds an already-extracted entry and writes it
+  # into the vector store (without another LLM call).
   def self.index_entry(entry)
     settings = Setting.plugin_redmine_expert_helpdesk
     store  = RedmineExpertHelpdesk::KnowledgeStore.for(settings)
@@ -113,7 +113,7 @@ class HelpdeskKnowledgeIngestJob < ActiveJob::Base
     new.send(:index!, store, client, entry)
     true
   rescue => e
-    Rails.logger.warn("[helpdesk][kb] Indexierung fehlgeschlagen (Eintrag ##{entry.id}): #{e.message}")
+    Rails.logger.warn("[helpdesk][kb] Indexing failed (entry ##{entry.id}): #{e.message}")
     false
   end
 

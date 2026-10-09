@@ -1,39 +1,39 @@
-# Prueft eingehende Mails auf bekannte Phishing-URLs (lokaler Feed-Spiegel)
-# und neutralisiert Treffer im MIME-Body.
+# Checks incoming mails for known phishing URLs (local feed mirror)
+# and neutralizes hits in the MIME body.
 #
-# Zusaetzliche Heuristiken fuer verschleierte Links (Warnbox statt Entfernung):
-#   - Weiterleitungs-Links: URL traegt eine zweite, url-kodierte Ziel-URL im
-#     Query-Parameter (z. B. redirect-url.email/?link=https%3A%2F%2F...)
-#   - Kurz-URL-Dienste (bit.ly, tinyurl, ...): Ziel nicht erkennbar
-#   - Anchor-Mismatch: sichtbarer Linktext zeigt eine andere Domain als das href-Ziel
+# Additional heuristics for obfuscated links (warning box instead of removal):
+#   - Redirect links: the URL carries a second, url-encoded target URL in the
+#     query parameter (e.g. redirect-url.email/?link=https%3A%2F%2F...)
+#   - Short URL services (bit.ly, tinyurl, ...): target not recognizable
+#   - Anchor mismatch: visible link text shows a different domain than the href target
 #
-# Microsoft SafeLinks (*.safelinks.protection.outlook.com) werden lokal
-# dekodiert (Original-URL steckt url-encodiert im Query-Parameter "url") –
-# es findet kein HTTP-Request statt.
+# Microsoft SafeLinks (*.safelinks.protection.outlook.com) are decoded
+# locally (the original URL is url-encoded in the query parameter "url") -
+# no HTTP request takes place.
 #
-# Rueckgabe von scan: { :mime =>, :hits => [...], :suspicions => [...] }
-# Treffer:   { :url, :resolved_url, :phish_id, :target, :source_label }
-# Verdacht:  { :url, :reason (:redirect|:shortener|:anchor_mismatch), :detail, :label }
+# Return value of scan: { :mime =>, :hits => [...], :suspicions => [...] }
+# Hit:      { :url, :resolved_url, :phish_id, :target, :source_label }
+# Suspicion: { :url, :reason (:redirect|:shortener|:anchor_mismatch), :detail, :label }
 
 require 'cgi'
 
 module RedmineExpertHelpdesk
   class PhishingScanner
-    # Grobe URL-Erkennung in Klartext; endgueltige Pruefung erfolgt normalisiert.
+    # Rough URL detection in plain text; final check happens normalized.
     URL_PATTERN = %r{https?://[^\s<>"'\)\]]+}i.freeze
 
     SAFELINKS_HOST_SUFFIX = '.safelinks.protection.outlook.com'.freeze
 
-    # Bekannte Kurz-URL-/Redirect-Dienste (Ziel nicht erkennbar)
+    # Known short URL/redirect services (target not recognizable)
     SHORTENER_DOMAINS = %w[
       bit.ly tinyurl.com t.co goo.gl is.gd ow.ly buff.ly cutt.ly rebrand.ly
       tiny.cc rb.gy shorturl.at s.id t.ly v.gd qr.ae adf.ly rotf.lol lnkiy.com
     ].freeze
 
-    # HTML-Anchor mit absolutem Ziel und sichtbarem Text
+    # HTML anchor with absolute target and visible text
     ANCHOR_PATTERN = %r{<a\b[^>]*href\s*=\s*["']?(https?://[^"'\s>]+)["']?[^>]*>(.*?)</a>}im.freeze
 
-    # Domain-artiger Token im sichtbaren Linktext (z. B. "www.paypal.com")
+    # Domain-like token in the visible link text (e.g. "www.paypal.com")
     DOMAIN_IN_TEXT = %r{(?:[a-z0-9][a-z0-9-]*\.)+[a-z]{2,}}i.freeze
 
     def self.scan(mime)
@@ -47,18 +47,18 @@ module RedmineExpertHelpdesk
       urls_checked = 0
 
       parts = scannable_parts(mail)
-      Rails.logger.info "Helpdesk/Phishing: Scanne #{parts.size} Mail-Part(s) (#{parts.map { |p| p.content_type.to_s.split(';').first }.join(', ')})"
+      Rails.logger.info "Helpdesk/Phishing: Scanning #{parts.size} mail part(s) (#{parts.map { |p| p.content_type.to_s.split(';').first }.join(', ')})"
 
       parts.each do |part|
         body = decoded_body(part)
         if body.blank?
-          Rails.logger.debug "Helpdesk/Phishing: Part #{part.content_type.to_s.split(';').first} hat keinen dekodierbaren Body"
+          Rails.logger.debug "Helpdesk/Phishing: Part #{part.content_type.to_s.split(';').first} has no decodable body"
           next
         end
 
         is_html = part.content_type.to_s =~ %r{text/html}i
         urls = extract_urls(body)
-        Rails.logger.info "Helpdesk/Phishing: #{urls.size} URL(s) in #{part.content_type.to_s.split(';').first} gefunden"
+        Rails.logger.info "Helpdesk/Phishing: #{urls.size} URL(s) found in #{part.content_type.to_s.split(';').first}"
 
         urls.each do |url|
           next if hits.key?(url) || suspicions.key?(url)
@@ -66,7 +66,7 @@ module RedmineExpertHelpdesk
           urls_checked += 1
           resolved = resolve_safelink(url)
           if resolved != url
-            Rails.logger.info "Helpdesk/Phishing: SafeLink aufgeloest: #{url.truncate(120)} -> #{resolved.truncate(120)}"
+            Rails.logger.info "Helpdesk/Phishing: SafeLink resolved: #{url.truncate(120)} -> #{resolved.truncate(120)}"
           end
 
           embedded = extract_embedded_url(resolved)
@@ -75,7 +75,7 @@ module RedmineExpertHelpdesk
                   (embedded && HelpdeskPhishingUrl.lookup(embedded))
           if entry
             source_label = entry.source == 'phishing_database' ? 'Phishing.Database' : "PhishTank ##{entry.phish_id}"
-            Rails.logger.warn "Helpdesk/Phishing: TREFFER fuer #{resolved.truncate(200)} (#{source_label})"
+            Rails.logger.warn "Helpdesk/Phishing: HIT for #{resolved.truncate(200)} (#{source_label})"
             hits[url] = {
               :url          => url,
               :resolved_url => resolved == url ? nil : resolved,
@@ -84,28 +84,28 @@ module RedmineExpertHelpdesk
               :source_label => source_label
             }
           elsif embedded
-            Rails.logger.warn "Helpdesk/Phishing: VERDACHT (Weiterleitung) #{url.truncate(120)} -> #{embedded.truncate(120)}"
+            Rails.logger.warn "Helpdesk/Phishing: SUSPICION (redirect) #{url.truncate(120)} -> #{embedded.truncate(120)}"
             suspicions[url] = build_suspicion(url, :redirect, embedded)
           elsif shortener?(resolved)
-            Rails.logger.warn "Helpdesk/Phishing: VERDACHT (Kurz-URL) #{resolved.truncate(120)}"
+            Rails.logger.warn "Helpdesk/Phishing: SUSPICION (short URL) #{resolved.truncate(120)}"
             suspicions[url] = build_suspicion(url, :shortener, nil)
           else
-            Rails.logger.debug "Helpdesk/Phishing: kein Treffer fuer #{resolved.truncate(200)} (Hash: #{HelpdeskPhishingUrl.hash_for(resolved)})"
+            Rails.logger.debug "Helpdesk/Phishing: no hit for #{resolved.truncate(200)} (Hash: #{HelpdeskPhishingUrl.hash_for(resolved)})"
           end
         end
 
-        # Anchor-Mismatch: sichtbarer Linktext zeigt andere Domain als das Ziel
+        # Anchor mismatch: visible link text shows a different domain than the target
         next unless is_html
 
         find_anchor_mismatches(body).each do |m|
           next if hits.key?(m[:href]) || suspicions.key?(m[:href])
 
-          Rails.logger.warn "Helpdesk/Phishing: VERDACHT (Linktext-Mismatch) Text zeigt #{m[:shown]}, Ziel ist #{m[:actual]}"
+          Rails.logger.warn "Helpdesk/Phishing: SUSPICION (link text mismatch) text shows #{m[:shown]}, target is #{m[:actual]}"
           suspicions[m[:href]] = build_suspicion(m[:href], :anchor_mismatch, "#{m[:shown]} -> #{m[:actual]}")
         end
       end
 
-      Rails.logger.info "Helpdesk/Phishing: Scan abgeschlossen – #{urls_checked} URL(s) geprueft, #{hits.size} Treffer, #{suspicions.size} Verdachtsfaelle"
+      Rails.logger.info "Helpdesk/Phishing: Scan finished – #{urls_checked} URL(s) checked, #{hits.size} hits, #{suspicions.size} suspicions"
 
       return { :mime => mime, :hits => [], :suspicions => [] } if hits.empty? && suspicions.empty?
 
@@ -115,12 +115,12 @@ module RedmineExpertHelpdesk
 
       { :mime => mail.to_s, :hits => hits.values, :suspicions => suspicions.values }
     rescue StandardError => e
-      Rails.logger.error "Helpdesk: Phishing-Scan fehlgeschlagen: #{e.message}"
+      Rails.logger.error "Helpdesk: Phishing scan failed: #{e.message}"
       { :mime => mime, :hits => [], :suspicions => [] }
     end
 
-    # Dekodiert eine SafeLinks-URL zur Original-URL. Nicht-SafeLinks-URLs
-    # werden unveraendert zurueckgegeben.
+    # Decodes a SafeLinks URL to the original URL. Non-SafeLinks URLs
+    # are returned unchanged.
     def resolve_safelink(url)
       uri = URI.parse(url)
       return url unless uri.host&.downcase&.end_with?(SAFELINKS_HOST_SUFFIX)
@@ -133,8 +133,8 @@ module RedmineExpertHelpdesk
 
     private
 
-    # Liefert die zu scannenden Mail-Parts (text/plain + text/html).
-    # Bei nicht-multipart Mails die Mail selbst.
+    # Returns the mail parts to scan (text/plain + text/html).
+    # For non-multipart mails the mail itself.
     def scannable_parts(mail)
       if mail.multipart?
         mail.all_parts.select do |p|
@@ -145,10 +145,10 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Dekodiert den Part-Body nach UTF-8 unter Beruecksichtigung des deklarierten
-    # Charsets (Outlook sendet oft windows-1252/iso-8859-1). Ungueltige Bytes
-    # werden ersetzt (scrub), damit der Regex-Scan nicht mit
-    # "invalid byte sequence in UTF-8" fehlschlaegt.
+    # Decodes the part body to UTF-8 respecting the declared
+    # charsets (Outlook often sends windows-1252/iso-8859-1). Invalid bytes
+    # are replaced (scrub) so the regex scan does not fail with
+    # "invalid byte sequence in UTF-8".
     def decoded_body(part)
       body = part.body.decoded.dup
       charset = part.charset.to_s.presence
@@ -173,9 +173,9 @@ module RedmineExpertHelpdesk
       body.scan(URL_PATTERN).map { |u| u.sub(/[.,;:!?]+\z/, '') }.uniq
     end
 
-    # Extrahiert eine im Query-Parameter eingebettete absolute Ziel-URL
-    # (Redirect-/Tracking-Links wie ...?link=https%3A%2F%2Fevil.example%2F).
-    # query_pairs dekodiert die Werte bereits. Liefert nil wenn keine vorhanden.
+    # Extracts an absolute target URL embedded in the query parameter
+    # (redirect/tracking links like ...?link=https%3A%2F%2Fevil.example%2F).
+    # query_pairs already decodes the values. Returns nil when none is present.
     def extract_embedded_url(url)
       uri = URI.parse(url)
       return nil if uri.query.blank?
@@ -189,13 +189,13 @@ module RedmineExpertHelpdesk
       nil
     end
 
-    # Query-String als [[key, value], ...] mit dekodierten Werten.
+    # Query string as [[key, value], ...] with decoded values.
     #
-    # Ersetzt CGI.parse, das Ruby 4.0 entfernt hat. Auch nicht
-    # URI.decode_www_form: das wirft bei einem Segment ohne "=" und verwirft
-    # dann den ganzen Query-String samt der gueltigen Paare. CGI.parse war an
-    # dieser Stelle tolerant, und genau darauf kommt es hier an - die
-    # Redirect-Links, die wir auspacken wollen, sind selten sauber gebaut.
+    # Replaces CGI.parse, which Ruby 4.0 removed. Not
+    # URI.decode_www_form either: that raises on a segment without "=" and then
+    # discards the whole query string including its valid pairs. CGI.parse was
+    # tolerant here, and that is exactly what matters - the
+    # redirect links we want to unpack are rarely cleanly built.
     def query_pairs(uri)
       return [] if uri.query.blank?
 
@@ -210,12 +210,12 @@ module RedmineExpertHelpdesk
     def decode_component(value)
       URI.decode_www_form_component(value.to_s)
     rescue ArgumentError
-      # Kaputtes Prozent-Encoding: unveraendert durchreichen statt den
-      # kompletten Link zu verlieren.
+      # Broken percent encoding: pass through unchanged instead of losing the
+      # whole link.
       value.to_s
     end
 
-    # Ist der Host ein bekannter Kurz-URL-Dienst?
+    # Is the host a known short URL service?
     def shortener?(url)
       host = URI.parse(url).host.to_s.downcase.sub(/\Awww\./, '')
       return false if host.empty?
@@ -225,8 +225,8 @@ module RedmineExpertHelpdesk
       false
     end
 
-    # Findet HTML-Anchors, deren sichtbarer Text eine andere Domain zeigt
-    # als das href-Ziel (klassische Link-Verschleierung).
+    # Finds HTML anchors whose visible text shows a different domain
+    # than the href target (classic link obfuscation).
     def find_anchor_mismatches(html)
       html.scan(ANCHOR_PATTERN).filter_map do |href, inner|
         shown = inner.gsub(/<[^>]+>/, ' ')[DOMAIN_IN_TEXT]
@@ -260,8 +260,8 @@ module RedmineExpertHelpdesk
       { :url => url, :reason => reason, :detail => detail, :label => label }
     end
 
-    # Ersetzt Treffer-URLs, markiert Verdachtsfaelle mit Warnbox und stellt
-    # ein Warnbanner voran.
+    # Replaces hit URLs, marks suspicions with a warning box and prepends
+    # a warning banner.
     def rewrite_part(part, hits, suspicions)
       body = decoded_body(part)
       return if body.blank?
@@ -281,7 +281,7 @@ module RedmineExpertHelpdesk
       suspicions.each_value do |suspicion|
         escaped_url = Regexp.escape(suspicion[:url])
         if is_html
-          # Warnbox hinter den zugehoerigen Anchor setzen (nie in Attribute schreiben)
+          # Warning box behind the associated anchor (never write into attributes)
           anchor = /(<a\b[^>]*href\s*=\s*["']?#{escaped_url}["']?[^>]*>.*?<\/a>)/im
           if body =~ anchor
             box = suspicion_html_box(suspicion[:label])
@@ -303,8 +303,8 @@ module RedmineExpertHelpdesk
                end
       body = banner + body
 
-      # Body ist jetzt UTF-8 – Charset des Parts entsprechend setzen,
-      # sonst interpretiert der Empfaenger die Bytes im alten Charset.
+      # Body is now UTF-8 - set the part's charset accordingly,
+      # otherwise the recipient interprets the bytes in the old charset.
       part.body = nil
       part.charset = 'UTF-8'
       part.content_transfer_encoding = 'base64'

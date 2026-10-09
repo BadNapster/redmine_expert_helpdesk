@@ -16,10 +16,10 @@ class HelpdeskMailbox < HelpdeskApplicationRecord
 
   UNKNOWN_USER_MODES = %w[accept create ignore].freeze
 
-  # Kombination der Postfach-Fusszeile mit der zentralen Signatur:
-  #   inherit  - zentrale Signatur (Fallback: Postfach-Fusszeile, solange keine zentrale gepflegt ist)
-  #   prepend  - Postfach-Fusszeile VOR der zentralen Signatur
-  #   override - nur die Postfach-Fusszeile
+  # Combination of the mailbox footer with the central signature:
+  #   inherit  - central signature (fallback: mailbox footer, as long as no central one is maintained)
+  #   prepend  - mailbox footer BEFORE the central signature
+  #   override - only the mailbox footer
   FOOTER_MODES = %w[inherit prepend override].freeze
 
   # Mail backend of this mailbox.
@@ -275,8 +275,8 @@ class HelpdeskMailbox < HelpdeskApplicationRecord
     }.reject { |_k, v| v.blank? }
   end
 
-  # Effektive Fusszeilen-Vorlage (unrendered, Makros noch enthalten):
-  # kombiniert Postfach-Fusszeile und zentrale Signatur gemaess footer_mode.
+  # Effective footer template (unrendered, macros still present):
+  # combines the mailbox footer and the central signature according to footer_mode.
   def effective_footer_template
     global = Setting.plugin_redmine_expert_helpdesk['global_footer'].to_s
 
@@ -286,7 +286,7 @@ class HelpdeskMailbox < HelpdeskApplicationRecord
     when 'prepend'
       [reply_footer.presence, global.presence].compact.join("\n\n")
     else # inherit
-      # Fallback auf die Postfach-Fusszeile, solange keine zentrale Signatur gepflegt ist
+      # Fall back to the mailbox footer as long as no central signature is maintained
       global.presence || reply_footer.to_s
     end
   end
@@ -295,12 +295,12 @@ class HelpdeskMailbox < HelpdeskApplicationRecord
 
   def set_defaults
     self.autoresponder_subject ||= '[#{{ticket_id}}] {{ticket_subject}}'
-    self.autoresponder_body    ||= "Sehr geehrte/r {{contact_name}},\n\n" \
-                                   "vielen Dank fuer Ihre Nachricht. Wir haben Ihre Anfrage erhalten " \
-                                   "und werden uns schnellstmoeglich darum kuemmern.\n\n" \
-                                   "Ihre Ticket-Nummer: \#{{ticket_id}}\n" \
-                                   "Betreff: {{ticket_subject}}\n\n" \
-                                   "Mit freundlichen Gruessen\n" \
+    self.autoresponder_body    ||= "Здравствуйте, {{contact_name}},\n\n" \
+                                   "спасибо за ваше сообщение. Мы получили ваше обращение " \
+                                   "и займемся им в ближайшее время.\n\n" \
+                                   "Номер вашего обращения: \#{{ticket_id}}\n" \
+                                   "Тема: {{ticket_subject}}\n\n" \
+                                   "С уважением,\n" \
                                    "{{project_name}}"
     self.reply_footer          ||= "--\n{{project_name}}"
 

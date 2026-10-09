@@ -97,7 +97,7 @@
     valueWrap.innerHTML = '';
 
     if (!opts || opts.length === 0) {
-      // "ignore" oder leere Liste → kein Wertfeld nötig
+      // "ignore" or empty list → no value field needed
       return;
     }
 
@@ -118,7 +118,7 @@
 
     valueWrap.appendChild(sel);
 
-    // Leicht Abstand zum Submit-Button
+    // Small spacing before the submit button
     valueWrap.insertAdjacentHTML('beforeend', '&ensp;');
   }
 

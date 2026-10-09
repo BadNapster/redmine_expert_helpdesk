@@ -1,6 +1,6 @@
-# Loesungsvorschlaege je Ticket, ermittelt bei der Zusammenfassung aus aehnlichen
-# geloesten Tickets (RAG). Wird bei jedem Zusammenfassungslauf fuer das Ticket neu
-# erzeugt (delete + insert) und in der Ticket-Seitenleiste angezeigt.
+# Solution proposals per ticket, determined during the summary from similar
+# solved tickets (RAG). Recreated for the ticket on every summary run
+# (delete + insert) and shown in the ticket sidebar.
 class CreateHelpdeskKbProposals < ActiveRecord::Migration[6.1]
   def change
     return if table_exists?(:helpdesk_kb_proposals)

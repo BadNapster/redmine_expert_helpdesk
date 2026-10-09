@@ -7,9 +7,9 @@
 # Foundation; either version 2 of the License, or (at your option) any later
 # version. See LICENSE for the full text.
 #
-# E-Mail-zu-Ticket-Plugin mit Microsoft-Graph-Anbindung (O365, OAuth Client Credentials).
-# Pro Projekt koennen Postfaecher konfiguriert werden, deren Mails als Tickets
-# bzw. Ticket-Antworten verarbeitet werden.
+# Email-to-ticket plugin with Microsoft Graph integration (O365, OAuth client credentials).
+# Per project, mailboxes can be configured whose mails are processed as tickets
+# or ticket replies.
 
 # Keep this plugin's credentials out of the Rails parameter log.
 #
@@ -92,7 +92,7 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
   requires_redmine :version_or_higher => '5.0'
   url 'https://github.com/expertZentrale/redmine_expert_helpdesk'
 
-  # Zentrale App-Registrierung (Azure AD / Entra ID) und API-Key fuer den Fetch-Endpunkt
+  # Central app registration (Azure AD / Entra ID) and API key for the fetch endpoint
   settings :partial => 'settings/helpdesk_settings',
            :default => {
              'tenant_id'                => '',
@@ -150,10 +150,10 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
              'ai_log_level'         => RedmineExpertHelpdesk::AiLogger::DEFAULT_LEVEL,
              'ai_max_output_tokens' => '500',
              'ai_timeout'           => '60',
-             # Kundengerichteter Antwortentwurf (Knopf in der Notiz-Werkzeugleiste).
-             # Eigenes Zeitbudget, weil dieser Aufruf - anders als alle anderen -
-             # synchron in einem Web-Request laeuft: 60 s haengen einen Puma-Thread
-             # und laufen ausserdem in das Upstream-Timeout des Reverse Proxy.
+             # Customer-facing answer draft (button in the note toolbar).
+             # Own time budget, because this call - unlike all others - runs
+             # synchronously in a web request: 60 s would hang a Puma thread and
+             # also run into the reverse proxy's upstream timeout.
              'ai_answer_enabled'    => '0',
              'ai_answer_prompt'     => RedmineExpertHelpdesk::AnswerDrafter::DEFAULT_PROMPT,
              'ai_answer_min_score'  => RedmineExpertHelpdesk::AnswerDrafter::DRAFT_MIN_SCORE.to_s,
@@ -162,7 +162,7 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
              # Completeness check of incoming first mails ("follow-up").
              # Central master switch; mode and rules live per project.
              'info_request_enabled'   => '0',
-             'info_request_subject'   => 'Rueckfrage zu Ihrer Anfrage [#{{issue.id}}] {{issue.subject}}',
+             'info_request_subject'   => 'Уточнение по вашему обращению [#{{issue.id}}] {{issue.subject}}',
              'info_request_body'      => RedmineExpertHelpdesk::InfoRequestMailer::DEFAULT_BODY,
              'info_request_ai_prompt' => RedmineExpertHelpdesk::CompletenessCheck::DEFAULT_AI_PROMPT,
              'kb_enabled'         => '0',
@@ -238,10 +238,10 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
     }, :require => :member
   end
 
-  # Globale Berechtigung fuer die KI-Statistik (Kostenrisiko der KI-Funktionen).
-  # Ausserhalb des project_module deklariert (:global => true), damit sie einmalig
-  # einer Rolle (z. B. "ai-admin") gewaehrt werden kann und dann projektuebergreifend
-  # gilt – ohne Projektmitgliedschaft.
+  # Global permission for the AI statistics (cost risk of the AI features).
+  # Declared outside the project_module (:global => true) so it can be granted
+  # to a role (e.g. "ai-admin") once and then applies across projects - without
+  # project membership.
   permission :view_helpdesk_ai_statistics, {
     :helpdesk_ai_statistics => [:index]
   }, :global => true
@@ -253,7 +253,7 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
        :param    => :project_id,
        :if       => Proc.new { |p| p.module_enabled?(:helpdesk) }
 
-  # SLA-Statistik-Reiter nur bei aktivem SLA im Projekt
+  # SLA statistics tab only when SLA is active in the project
   menu :project_menu, :helpdesk_sla_statistics,
        { :controller => 'helpdesk_sla_statistics', :action => 'index' },
        :caption  => :label_helpdesk_sla_statistics,
@@ -299,20 +299,20 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
            User.current.allowed_to?(:view_helpdesk_ai_statistics, nil, :global => true)
        }
 
-  # Direkter Eintrag im Administrationsmenue (Sidebar + Admin-Uebersicht),
-  # der ohne Umweg ueber "Plugins > Konfigurieren" direkt auf die
-  # Plugin-Einstellungen verlinkt. Icon versionsabhaengig:
-  #  - Redmine 6/7: SVG-Sprite-Icon aus dem Plugin-Sprite (assets/images/icons.svg,
-  #    Symbol `icon--helpdesk`) ueber :icon + :plugin (render_single_menu_node ruft
+  # Direct entry in the Administration menu (sidebar + admin overview) that links
+  # straight to the plugin settings without going via "Plugins > Configure". Icon
+  # depends on the version:
+  #  - Redmine 6/7: SVG sprite icon from the plugin sprite (assets/images/icons.svg,
+  #    symbol `icon--helpdesk`) via :icon + :plugin (render_single_menu_node calls
   #    sprite_icon(item.icon, plugin: item.plugin)).
-  #  - Redmine 5: die alten SVG-Sprites/`:icon` gibt es noch nicht -> altes
-  #    CSS-Sprite-Icon ueber die `icon icon-*`-Klasse am Link.
+  #  - Redmine 5: the old SVG sprites/`:icon` do not exist yet -> old CSS sprite
+  #    icon via the `icon icon-*` class on the link.
   admin_menu_options = { :caption => :label_expert_helpdesk }
   if Redmine::VERSION::MAJOR >= 6
     admin_menu_options[:icon]   = 'helpdesk'
     admin_menu_options[:plugin] = 'redmine_expert_helpdesk'
-    # `icon`-Klasse noetig, damit das SVG die blaue currentColor-Strichfarbe der
-    # anderen Admin-Menue-Icons erbt (ohne sie bleibt es im .icon-svg-Standardgrau).
+    # The `icon` class is needed so the SVG inherits the blue currentColor stroke
+    # of the other admin menu icons (without it, it stays at the .icon-svg default grey).
     admin_menu_options[:html]   = { :class => 'icon' }
   else
     admin_menu_options[:html] = { :class => 'icon icon-email' }
@@ -322,14 +322,13 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
        admin_menu_options
 end
 
-# Patches direkt anwenden: Redmine fuehrt init.rb innerhalb eines
-# to_prepare-Callbacks aus (PluginLoader#run_initializer) und laedt es im
-# Dev-Modus bei jedem Reload erneut. Eigene to_prepare-Registrierungen aus
-# init.rb heraus wuerden in Produktion nie ausgefuehrt, da die Callbacks zu
-# diesem Zeitpunkt bereits in den Reloader kopiert wurden.
-# project_settings_tabs per UnboundMethod-Capture patchen (nicht prepend/super),
-# damit der Helpdesk-Reiter mit alias_method_chain-Plugins koexistiert
-# (z. B. RedmineUP redmine_contacts_helpdesk). Siehe projects_helper_patch.rb.
+# Apply patches directly: Redmine runs init.rb inside a to_prepare callback
+# (PluginLoader#run_initializer) and reloads it on every reload in dev mode.
+# Own to_prepare registrations from init.rb would never run in production,
+# because the callbacks are already copied into the reloader by that point.
+# project_settings_tabs is patched via an UnboundMethod capture (not prepend/super),
+# so the Helpdesk tab coexists with alias_method_chain plugins
+# (e.g. RedmineUP redmine_contacts_helpdesk). See projects_helper_patch.rb.
 RedmineExpertHelpdesk::Patches::ProjectsHelperPatch.apply!(ProjectsHelper)
 unless Project.included_modules.include?(RedmineExpertHelpdesk::Patches::ProjectPatch)
   Project.include(RedmineExpertHelpdesk::Patches::ProjectPatch)
@@ -340,21 +339,21 @@ end
 unless IssueQuery.ancestors.include?(RedmineExpertHelpdesk::Patches::IssueQueryPatch)
   IssueQuery.prepend(RedmineExpertHelpdesk::Patches::IssueQueryPatch)
 end
-# column_content ebenfalls per UnboundMethod-Capture (nicht prepend/super), damit
-# die SLA-Chip-Spalten mit alias_method_chain-Plugins koexistieren
-# (z. B. RedmineUP redmine_contacts_helpdesk). Siehe queries_helper_patch.rb.
+# column_content also via an UnboundMethod capture (not prepend/super), so the
+# SLA chip columns coexist with alias_method_chain plugins
+# (e.g. RedmineUP redmine_contacts_helpdesk). See queries_helper_patch.rb.
 RedmineExpertHelpdesk::Patches::QueriesHelperPatch.apply!(QueriesHelper)
 
-# css_classes ebenfalls per UnboundMethod-Capture (siehe issue_css_classes_patch.rb):
-# IssuePatch wird per include eingebunden und kann die Methode nicht ueberschreiben.
+# css_classes also via an UnboundMethod capture (see issue_css_classes_patch.rb):
+# IssuePatch is included via include and cannot override the method.
 RedmineExpertHelpdesk::Patches::IssueCssClassesPatch.apply!(Issue)
 
 unless Journal.included_modules.include?(RedmineExpertHelpdesk::Patches::JournalPatch)
   Journal.include(RedmineExpertHelpdesk::Patches::JournalPatch)
 end
-# hd_icon_label global verfuegbar machen: Redmine setzt include_all_helpers = false,
-# daher werden Plugin-Helfer nicht automatisch in Kern-Views eingebunden.
-# ApplicationHelper ist in allen Views verfuegbar.
+# Make hd_icon_label globally available: Redmine sets include_all_helpers = false,
+# so plugin helpers are not automatically included in core views.
+# ApplicationHelper is available in all views.
 unless ApplicationHelper.included_modules.include?(HelpdeskIconsHelper)
   ApplicationHelper.include(HelpdeskIconsHelper)
 end
@@ -365,11 +364,12 @@ unless ApplicationHelper.included_modules.include?(HelpdeskReplyTemplatesHelper)
   ApplicationHelper.include(HelpdeskReplyTemplatesHelper)
 end
 
-# Aktivitaets-Feed: eingehende, ausgehende und initiale Helpdesk-Nachrichten registrieren.
-# Ab Redmine 6 muss das Plugin angegeben werden, damit der Feed die Richtungs-Icons aus
-# dem Plugin-Sprite (assets/icons.svg) laedt: activity_event_type_icon -> sprite_icon(
-# 'helpdesk-message-in', plugin: 'redmine_expert_helpdesk'). Ohne :plugin liefert
-# Redmine::Activity.plugin_name nil, das Icon wird im Kern-Sprite gesucht (nicht vorhanden).
+# Activity feed: register incoming, outgoing and initial Helpdesk messages.
+# As of Redmine 6 the plugin must be given so the feed loads the direction icons
+# from the plugin sprite (assets/icons.svg): activity_event_type_icon -> sprite_icon(
+# 'helpdesk-message-in', plugin: 'redmine_expert_helpdesk'). Without :plugin,
+# Redmine::Activity.plugin_name returns nil and the icon is looked up in the core
+# sprite (not present).
 helpdesk_activity_options = { :class_name => 'HelpdeskMessage', :default => true }
 helpdesk_activity_options[:plugin] = 'redmine_expert_helpdesk' if Redmine::VERSION::MAJOR >= 6
 Redmine::Activity.register :helpdesk_messages, helpdesk_activity_options

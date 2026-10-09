@@ -37,8 +37,8 @@ module RedmineExpertHelpdesk
         "(SELECT hc.email FROM helpdesk_contacts hc" \
         " WHERE hc.id = #{HELPDESK_CUSTOMER_CONTACT_ID_SQL})".freeze
 
-      # Schweregrad-Rang je Uhr (0 kein SLA .. 5 ueberschritten). done_at ist bei
-      # der Reaktion first_response_at, bei der Loesung issues.closed_on.
+      # Severity rank per clock (0 no SLA .. 5 breached). done_at is
+      # first_response_at for the reaction, issues.closed_on for the solution.
       def self.sla_rank_sql(done_at_expr, due_col, warn_col)
         <<~SQL.squish.freeze
           (SELECT CASE
@@ -52,15 +52,15 @@ module RedmineExpertHelpdesk
         SQL
       end
 
-      # Reaktion: ohne erfasste Erstreaktion gilt der Schliesszeitpunkt als
-      # Abschluss (Reaktionsuhr laeuft nicht ueber das Loesen hinaus weiter).
+      # Reaction: without a recorded first reaction, the closing time counts as
+      # completion (the reaction clock does not keep running beyond the resolution).
       SLA_REACTION_RANK_SQL =
         sla_rank_sql("COALESCE(ti.first_response_at, #{Issue.quoted_table_name}.closed_on)",
                      'sla_reaction_due_at', 'sla_reaction_warn_at')
       SLA_SOLUTION_RANK_SQL =
         sla_rank_sql("#{Issue.quoted_table_name}.closed_on", 'sla_solution_due_at', 'sla_solution_warn_at')
 
-      # Filter-Status -> Rang (muss zur CASE-Logik oben passen).
+      # Filter status -> rank (must match the CASE logic above).
       SLA_STATUS_RANKS = {
         'met'           => 1,
         'running'       => 2,
@@ -69,17 +69,17 @@ module RedmineExpertHelpdesk
         'breached'      => 5
       }.freeze
 
-      # "Wartet auf Bearbeitung": Zeitpunkt der aeltesten unbeantworteten Kunden-
-      # antwort. Anders als bei den SLA-Spalten ist das ein reiner IS-NULL-Test,
-      # daher kein UTC_TIMESTAMP() und kein Zeitzonen-Thema; das Wartealter wird in
-      # Ruby gerendert.
+      # "Awaiting agent": timestamp of the oldest unanswered customer
+      # reply. Unlike the SLA columns this is a plain IS-NULL test,
+      # hence no UTC_TIMESTAMP() and no timezone concern; the waiting age is
+      # rendered in Ruby.
       AWAITING_SINCE_SQL = <<~SQL.squish.freeze
         (SELECT ti.awaiting_agent_since FROM helpdesk_ticket_infos ti
          WHERE ti.issue_id = #{Issue.quoted_table_name}.id)
       SQL
 
-      # Aufsteigend sortiert: wartende Tickets zuerst, darin die am laengsten
-      # wartenden zuerst. Wartende bekommen daher 0, nicht 1.
+      # Ascending sort: waiting tickets first, and within them the longest
+      # waiting first. Waiting tickets therefore get 0, not 1.
       AWAITING_SORT_SQL = [
         "(CASE WHEN #{AWAITING_SINCE_SQL} IS NULL THEN 1 ELSE 0 END)",
         AWAITING_SINCE_SQL
@@ -120,9 +120,9 @@ module RedmineExpertHelpdesk
           )
         end
 
-        # Bewusst nicht an einen Setting-Lesezugriff gekoppelt: prepended laeuft beim
-        # Boot, ein Setting-Zugriff dort waere ein Boot-Order-Risiko. Eine registrierte,
-        # ggf. leere Spalte ist harmlos.
+        # Deliberately not tied to a settings read: prepended runs at boot,
+        # a settings access there would be a boot-order risk. A registered,
+        # possibly empty column is harmless.
         unless base.available_columns.any? { |c| c.name == :helpdesk_awaiting_agent }
           base.available_columns << QueryColumn.new(
             :helpdesk_awaiting_agent,
@@ -132,7 +132,7 @@ module RedmineExpertHelpdesk
         end
       end
 
-      # Filter-Definition: wird bei jeder Query-Instanz registriert
+      # Filter definition: registered for every query instance
       def initialize_available_filters
         super
         add_available_filter 'helpdesk_kunde',
@@ -179,7 +179,7 @@ module RedmineExpertHelpdesk
         operator == '!' ? "NOT (#{cond})" : cond
       end
 
-      # Baut die Bedingung "(rang) IN (...)" fuer den Listen-Filter.
+      # Builds the condition "(rank) IN (...)" for the list filter.
       def sla_rank_condition(rank_sql, operator, value)
         ranks = Array(value).map { |v| SLA_STATUS_RANKS[v] }.compact
         return '1=0' if ranks.empty?

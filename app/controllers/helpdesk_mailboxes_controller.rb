@@ -1,4 +1,4 @@
-# CRUD fuer die Postfach-Konfiguration (Reiter "Helpdesk" in den Projekteinstellungen)
+# CRUD for the mailbox configuration ("Helpdesk" tab in the project settings)
 class HelpdeskMailboxesController < ApplicationController
   AJAX_ACTIONS = [:folders, :create_folder, :test_connection].freeze
 
@@ -43,7 +43,7 @@ class HelpdeskMailboxesController < ApplicationController
     redirect_to settings_project_path(@project, :tab => 'expert_helpdesk')
   end
 
-  # Liefert JSON-Array aller Ordnernamen fuer das angegebene Postfach (AJAX).
+  # Returns a JSON array of all folder names for the given mailbox (AJAX).
   def folders
     provider = draft_provider
     return render :json => { :error => l(:error_helpdesk_provider_not_configured) }, :status => 422 unless provider
@@ -53,7 +53,7 @@ class HelpdeskMailboxesController < ApplicationController
     render :json => { :error => e.message }, :status => 422
   end
 
-  # Legt einen neuen Ordner im Postfach an (AJAX, POST).
+  # Creates a new folder in the mailbox (AJAX, POST).
   def create_folder
     folder_name = params[:folder_name].to_s.strip
     return render :json => { :error => l(:error_helpdesk_missing_parameters) }, :status => 422 if folder_name.blank?
@@ -67,7 +67,7 @@ class HelpdeskMailboxesController < ApplicationController
     render :json => { :error => e.message }, :status => 422
   end
 
-  # Prueft Verbindung und Anmeldung des (noch ungespeicherten) Postfachs (AJAX, POST).
+  # Checks connection and login of the (not yet saved) mailbox (AJAX, POST).
   def test_connection
     provider = draft_provider
     return render :json => { :ok => false, :message => l(:error_helpdesk_provider_not_configured) }, :status => 422 unless provider
@@ -75,7 +75,7 @@ class HelpdeskMailboxesController < ApplicationController
     render :json => provider.test_connection
   end
 
-  # Startet den OAuth-Consent (authorization_code) fuer ein gespeichertes Postfach.
+  # Starts the OAuth consent (authorization_code) for a saved mailbox.
   def oauth_authorize
     redirect_to expert_helpdesk_oauth_authorize_path(:mailbox_id => @mailbox.id)
   end
@@ -109,8 +109,8 @@ class HelpdeskMailboxesController < ApplicationController
     address ? @project.helpdesk_mailboxes.find_by(:mailbox_address => address) : nil
   end
 
-  # Stellt sicher, dass alle konfigurierten Zielordner im Postfach existieren.
-  # Fehlende Ordner werden automatisch angelegt. Fehler werden als Warnung gemeldet.
+  # Ensures that all configured target folders exist in the mailbox.
+  # Missing folders are created automatically. Errors are reported as a warning.
   def ensure_mailbox_folders(mailbox)
     error = RedmineExpertHelpdesk::MailboxFolders.ensure!(mailbox)
     flash[:warning] = l(:warning_helpdesk_folder_create_failed, :message => error) if error

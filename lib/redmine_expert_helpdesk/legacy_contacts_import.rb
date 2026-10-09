@@ -1,21 +1,21 @@
-# Import von Altdaten aus dem RedmineUP-Plugin redmine_contacts / redmine_contacts_helpdesk.
+# Imports legacy data from the RedmineUP plugins redmine_contacts / redmine_contacts_helpdesk.
 #
-# Liest die alten Tabellen direkt per SQL (die Plugins selbst sind nicht mehr installiert):
-#   - contacts          (Kontaktdaten: Name, Firma, E-Mail, Telefon, ...)
-#   - contacts_projects (Zuordnung Kontakt -> Projekte)
-#   - helpdesk_tickets  (autoritative Zuordnung Ticket -> Kunde, inkl. Message-ID)
-#   - contacts_issues   (nur Fallback: generische "zugeordnete Kontakte", NICHT der Kunde!)
+# Reads the old tables directly via SQL (the plugins themselves are no longer installed):
+#   - contacts          (contact data: name, company, email, phone, ...)
+#   - contacts_projects (assignment contact -> projects)
+#   - helpdesk_tickets  (authoritative assignment ticket -> customer, incl. message ID)
+#   - contacts_issues   (fallback only: generic "assigned contacts", NOT the customer!)
 #
-# Der Import ist idempotent:
-#   - Kontakte, die (E-Mail + Projekt) bereits existieren, werden uebersprungen
-#   - Tickets mit korrekter bestehender Verknuepfung werden uebersprungen
-#   - Frueher falsch verknuepfte synthetische Import-Messages (aus contacts_issues)
-#     werden repariert, wenn helpdesk_tickets einen anderen Kunden nennt
+# The import is idempotent:
+#   - contacts that already exist (email + project) are skipped
+#   - tickets with a correct existing link are skipped
+#   - synthetic import messages that were incorrectly linked earlier (from contacts_issues)
+#     are repaired when helpdesk_tickets names a different customer
 #
-# Alte Tickets werden ueber eine synthetische HelpdeskMessage (direction 'in',
-# ohne Mailbox) mit dem Kontakt verknuepft, damit die Kundenkarte auf der
-# Ticketseite erscheint. message_id/sent_at werden aus helpdesk_tickets
-# uebernommen (verbessert das Antwort-Threading fuer Alt-Tickets).
+# Old tickets are linked to the contact via a synthetic HelpdeskMessage (direction 'in',
+# without mailbox) so the customer card appears on the ticket page.
+# message_id/sent_at are carried over from helpdesk_tickets
+# (improves the reply threading for old tickets).
 module RedmineExpertHelpdesk
   class LegacyContactsImport
     Result = Struct.new(:contacts_created, :contacts_existing, :contacts_without_email,
@@ -28,7 +28,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Sind Altdaten vorhanden?
+    # Are there legacy data?
     def self.available?
       conn = ActiveRecord::Base.connection
       conn.table_exists?('contacts') && conn.select_value('SELECT COUNT(*) FROM contacts').to_i > 0
@@ -40,18 +40,18 @@ module RedmineExpertHelpdesk
       0
     end
 
-    # Projekte (inkl. "kein Projekt"-Bucket) mit Anzahl Alt-Kontakte, fuer die
-    # Auswahl auf der Import-Seite. Liefert je Projekt (und "kein Projekt"-Bucket,
-    # project_id nil) die Anzahl Alt-Kontakte, getrennt nach:
-    #   :with_issues    – Kontakt hat Tickets in diesem Projekt (ticket-basiert)
-    #   :without_issues – nur zugeordnet (contacts_projects), ohne Tickets im Projekt
+    # Projects (incl. the "no project" bucket) with the number of legacy contacts, for
+    # the selection on the import page. Returns per project (and "no project" bucket,
+    # project_id nil) the number of legacy contacts, split by:
+    #   :with_issues    – contact has tickets in this project (ticket-based)
+    #   :without_issues – only assigned (contacts_projects), without tickets in the project
     # [{ :project_id, :name, :with_issues, :without_issues, :count }, ...]; name nil =
-    # Projekt existiert nicht mehr. Sortiert nach Name, "kein Projekt" zuletzt.
+    # project no longer exists. Sorted by name, "no project" last.
     def self.legacy_project_options
       inst = new
       conn = inst.send(:conn)
 
-      # Projekte je Kontakt aus Tickets (mit Tickets) und aus contacts_projects.
+      # Projects per contact from tickets (with tickets) and from contacts_projects.
       ticket_map   = Hash.new { |h, k| h[k] = [] }
       assigned_map = Hash.new { |h, k| h[k] = [] }
       source = inst.send(:issue_link_source)
@@ -120,9 +120,9 @@ module RedmineExpertHelpdesk
       end.sort_by { |o| o[:name].to_s.strip.downcase } # names may carry a leading blank
     end
 
-    # project_ids: nil = alle Projekte importieren (Standard/rueckwaertskompatibel).
-    # Sonst ein Array ausgewaehlter Projekt-IDs; 'none'/leer waehlt zusaetzlich den
-    # "kein Projekt"-Bucket (Kontakte ohne Projektzuordnung).
+    # project_ids: nil = import all projects (default/backwards compatible).
+    # Otherwise an array of selected project ids; 'none'/empty additionally selects the
+    # "no project" bucket (contacts without a project assignment).
     # progress: optional callable(phase, done, total), called per processed row -
     # HelpdeskLegacyImportJob feeds it into the run row the status page polls.
     def initialize(project_ids = nil, progress: nil)
@@ -136,7 +136,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Soll dieses Projekt importiert werden? (project_id nil = "kein Projekt")
+    # Should this project be imported? (project_id nil = "no project")
     def selected?(project_id)
       return true if @filter.nil?
       return @include_no_project if project_id.nil?
@@ -148,7 +148,7 @@ module RedmineExpertHelpdesk
       result = Result.new(0, 0, 0, 0, 0, 0)
       import_contacts(result)
       link_issues(result)
-      Rails.logger.info "Helpdesk: Legacy-Kontaktimport abgeschlossen – #{result.to_h.inspect}"
+      Rails.logger.info "Helpdesk: legacy contact import finished – #{result.to_h.inspect}"
       result
     end
 
@@ -159,11 +159,11 @@ module RedmineExpertHelpdesk
     # also fences a superseded run - gets a say between batches.
     MOVE_BATCH = 500
 
-    # Haengt Alt-Anhaenge (container_type 'HelpdeskTicket', meist message.eml)
-    # an das zugehoerige Ticket um, damit sie in Redmine wieder sichtbar sind.
-    # Die Zuordnung HelpdeskTicket-ID -> Issue-ID kommt aus helpdesk_tickets.
-    # Zusaetzlich werden synthetische Import-Messages ohne EML-Verweis mit der
-    # Original-Mail verknuepft ("Original-Mail"-Link auf der Ticketseite).
+    # Re-attaches legacy attachments (container_type 'HelpdeskTicket', usually message.eml)
+    # to the related ticket so they become visible in Redmine again.
+    # The mapping HelpdeskTicket ID -> Issue ID comes from helpdesk_tickets.
+    # Additionally, synthetic import messages without an EML reference are linked to
+    # the original mail ("Original-Mail" link on the ticket page).
     # Only the selected projects (see #initialize) are touched.
     def fix_attachments
       result = FixResult.new(0, 0, 0)
@@ -179,8 +179,8 @@ module RedmineExpertHelpdesk
       SQL
 
       report('messages', 0, 1)
-      # EML mit synthetischen Import-Messages verknuepfen (nur ohne Mailbox,
-      # echte Mail-Verlaeufe haben ihren EML-Verweis bereits)
+      # Link EML to synthetic import messages (only without mailbox;
+      # real mail threads already have their EML reference)
       result.messages_linked = conn.update(<<~SQL)
         UPDATE helpdesk_messages hm
         INNER JOIN issues i ON i.id = hm.issue_id
@@ -194,9 +194,9 @@ module RedmineExpertHelpdesk
           #{project_condition('i.project_id')}
       SQL
 
-      Rails.logger.info "Helpdesk: EML-Anhang-Reparatur abgeschlossen – " \
-                        "#{result.attachments_fixed} umgehaengt, #{result.attachments_orphaned} verwaist, " \
-                        "#{result.messages_linked} Messages verknuepft"
+      Rails.logger.info "Helpdesk: EML attachment repair finished – " \
+                        "#{result.attachments_fixed} re-attached, #{result.attachments_orphaned} orphaned, " \
+                        "#{result.messages_linked} messages linked"
       result
     end
 
@@ -210,7 +210,7 @@ module RedmineExpertHelpdesk
 
       pairs = restorable_attachments.map { |id, ticket_id, _| [id, ticket_id] }
       result.attachments_restored = move_attachments(pairs, 'Issue', 'HelpdeskTicket', 'restore')
-      Rails.logger.info "Helpdesk: EML-Anhaenge an RedmineUP zurueckgegeben – #{result.attachments_restored}"
+      Rails.logger.info "Helpdesk: EML attachments returned to RedmineUP – #{result.attachments_restored}"
       result
     end
 
@@ -357,8 +357,8 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Projekt-Zuordnungen je Kontakt: contacts_projects + Projekte der Tickets,
-    # bei denen der Kontakt laut helpdesk_tickets der Kunde ist
+    # Project assignments per contact: contacts_projects + projects of the tickets
+    # where the contact is the customer according to helpdesk_tickets
     def contact_project_map
       map = Hash.new { |h, k| h[k] = [] }
 
@@ -377,15 +377,15 @@ module RedmineExpertHelpdesk
       map.transform_values(&:uniq)
     end
 
-    # Autoritative Quelle fuer Ticket->Kunde: helpdesk_tickets (redmine_contacts_helpdesk).
-    # contacts_issues ist nur die generische "zugeordnete Kontakte"-Tabelle (Fallback).
+    # Authoritative source for ticket->customer: helpdesk_tickets (redmine_contacts_helpdesk).
+    # contacts_issues is only the generic "assigned contacts" table (fallback).
     def issue_link_source
       @issue_link_source ||= conn.table_exists?('helpdesk_tickets') ? 'helpdesk_tickets' : 'contacts_issues'
     end
 
-    # Alte Ticket-Verknuepfungen: synthetische HelpdeskMessage pro Ticket anlegen,
-    # damit die Kundenkarte auf der Ticketseite erscheint. Bereits vorhandene
-    # synthetische Messages (fruehere Import-Laeufe) mit falschem Kontakt werden repariert.
+    # Old ticket links: create a synthetic HelpdeskMessage per ticket so the customer
+    # card appears on the ticket page. Already existing synthetic messages (from earlier
+    # import runs) with a wrong contact are repaired.
     def link_issues(result)
       if issue_link_source == 'helpdesk_tickets'
         rows = conn.select_all(
@@ -421,8 +421,8 @@ module RedmineExpertHelpdesk
       existing = HelpdeskMessage.where(:issue_id => issue.id).order(:id => :asc).first
 
       if existing
-        # Echte Mail-Verlaeufe (mit Mailbox) nie anfassen; nur synthetische
-        # Import-Messages mit abweichendem Kontakt reparieren.
+        # Never touch real mail threads (with a mailbox); only repair synthetic
+        # import messages with a different contact.
         if existing.helpdesk_mailbox_id.nil? && existing.helpdesk_contact_id != contact.id
           existing.update_columns(
             :helpdesk_contact_id => contact.id,
@@ -449,14 +449,14 @@ module RedmineExpertHelpdesk
       HelpdeskTicketInfo.link!(issue, contact)
       result.issue_links_created += 1
     rescue StandardError => e
-      Rails.logger.warn "Helpdesk: Legacy-Import fuer Ticket ##{row['issue_id']} fehlgeschlagen: #{e.message}"
+      Rails.logger.warn "Helpdesk: legacy import for ticket ##{row['issue_id']} failed: #{e.message}"
     end
 
     def normalized_message_id(value)
       value.to_s.delete('<>').strip.presence
     end
 
-    # redmine_contacts erlaubt mehrere kommagetrennte Adressen – erste verwenden
+    # redmine_contacts allows several comma-separated addresses – use the first one
     def primary_email(value)
       value.to_s.split(/[,;]/).first.to_s.downcase.strip
     end
@@ -465,7 +465,7 @@ module RedmineExpertHelpdesk
       value.to_s.split(/[,;]/).first.to_s.strip.presence
     end
 
-    # Firmen-Kontakte (is_company) tragen den Namen im company-Feld
+    # Company contacts (is_company) carry the name in the company field
     def build_name(row)
       truthy = [true, 1, '1', 't'].include?(row['is_company'])
       if truthy

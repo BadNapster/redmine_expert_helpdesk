@@ -1,8 +1,8 @@
-# Projekt-spezifische Einstellungen fuer KI-Zusammenfassungen eingehender Mails.
-# Provider/Key/Modell/Default-Prompt liegen zentral (Plugin-Settings); hier nur
-# die pro-Projekt-Steuerung: aktiv, Umfang (nur Erstmail / auch Antworten),
-# Prompt-Modus (erben/erweitern/ersetzen) + Projekt-Prompt und die Auswahl,
-# welche Anhaenge (Metadaten / extrahierter Text / Bilder) an die KI gehen.
+# Project-specific settings for AI summaries of incoming mails.
+# Provider/key/model/default prompt live centrally (plugin settings); here only
+# the per-project control: enabled, scope (first mail only / replies too),
+# prompt mode (inherit/extend/replace) + project prompt, and the choice of
+# which attachments (metadata / extracted text / images) go to the AI.
 class AddAiSettingsToHelpdeskProjectSettings < ActiveRecord::Migration[6.1]
   def change
     change_table :helpdesk_project_settings, :bulk => true do |t|

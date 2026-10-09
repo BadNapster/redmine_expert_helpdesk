@@ -1,4 +1,4 @@
-# Phishing-Pruefung pro Projekt aktivierbar; Aktion bei Treffer konfigurierbar.
+# Phishing check can be enabled per project; the action on a hit is configurable.
 class AddPhishingSettingsToHelpdeskProjectSettings < ActiveRecord::Migration[6.1]
   def change
     unless column_exists?(:helpdesk_project_settings, :phishing_check_enabled)

@@ -1,14 +1,14 @@
-# Wissensbasis-Batchaufgaben.
+# Knowledge base batch tasks.
 #
 #   bundle exec rake redmine_expert_helpdesk:kb_backfill RAILS_ENV=production
 #   bundle exec rake redmine_expert_helpdesk:kb_reembed  RAILS_ENV=production
 #   bundle exec rake redmine_expert_helpdesk:kb_reextract [PROJECT=<id|identifier>] [ALL=1] RAILS_ENV=production
 #
 namespace :redmine_expert_helpdesk do
-  desc 'Nimmt bereits geschlossene Tickets beitragender Projekte in die Wissensbasis auf'
+  desc 'Adds already closed tickets of contributing projects to the knowledge base'
   task :kb_backfill => :environment do
     unless RedmineExpertHelpdesk::AiFeatures.kb_enabled?
-      puts 'Wissensbasis ist in den Plugin-Einstellungen deaktiviert.'
+      puts 'The knowledge base is disabled in the plugin settings.'
       next
     end
 
@@ -26,22 +26,22 @@ namespace :redmine_expert_helpdesk do
         count += 1
       end
       total += count
-      puts "#{project.identifier}: #{count} Tickets zur Aufnahme eingereiht."
+      puts "#{project.identifier}: #{count} tickets queued for ingestion."
     end
-    puts "Gesamt eingereiht: #{total}."
+    puts "Total queued: #{total}."
   end
 
-  desc 'Baut die Vektoren aller freigegebenen Wissensbasis-Eintraege neu (z. B. nach Modellwechsel)'
+  desc 'Rebuilds the vectors of all approved knowledge base entries (e.g. after a model change)'
   task :kb_reembed => :environment do
     settings = Setting.plugin_redmine_expert_helpdesk
     unless RedmineExpertHelpdesk::AiFeatures.kb_enabled?
-      puts 'Wissensbasis ist deaktiviert.'
+      puts 'The knowledge base is disabled.'
       next
     end
 
     store = RedmineExpertHelpdesk::KnowledgeStore.for(settings)
     unless store.configured?
-      puts 'Vektor-Store ist nicht konfiguriert.'
+      puts 'The vector store is not configured.'
       next
     end
 
@@ -56,18 +56,18 @@ namespace :redmine_expert_helpdesk do
     pids.sort.each do |pid|
       count = HelpdeskKnowledgeReindexJob.rebuild(pid)
       if count.nil?
-        puts "Projekt #{pid}: Neuaufbau fehlgeschlagen (siehe Log)."
+        puts "Project #{pid}: rebuild failed (see log)."
       else
         ok += count
       end
     end
-    puts "Neu indexiert: #{ok} Eintraege."
+    puts "Reindexed: #{ok} entries."
   end
 
-  desc 'Extrahiert Wissensbasis-Eintraege mit dem aktuellen Detailgrad neu (PROJECT=<id|identifier>, ALL=1 = alle)'
+  desc 'Re-extracts knowledge base entries with the current detail level (PROJECT=<id|identifier>, ALL=1 = all)'
   task :kb_reextract => :environment do
     unless RedmineExpertHelpdesk::AiFeatures.kb_ready?
-      puts 'Wissensbasis ist deaktiviert oder nicht vollstaendig konfiguriert.'
+      puts 'The knowledge base is disabled or not fully configured.'
       next
     end
 
@@ -79,7 +79,7 @@ namespace :redmine_expert_helpdesk do
         Project.where(:id => HelpdeskProjectSetting.where.not(:kb_ingest_mode => 'off').select(:project_id)).to_a
       end
     if projects.empty?
-      puts 'Kein passendes Projekt gefunden.'
+      puts 'No matching project found.'
       next
     end
 
@@ -88,8 +88,8 @@ namespace :redmine_expert_helpdesk do
       level = HelpdeskProjectSetting.for_project(project).effective_kb_extract_detail
       count = HelpdeskKnowledgeReextractJob.enqueue(project.id, :all => all).to_i
       total += count
-      puts "#{project.identifier} (#{level}): #{count} Eintraege zur Neu-Extraktion eingereiht."
+      puts "#{project.identifier} (#{level}): #{count} entries queued for re-extraction."
     end
-    puts "Gesamt eingereiht: #{total} (je Eintrag ein KI-Aufruf)."
+    puts "Total queued: #{total} (one AI call per entry)."
   end
 end

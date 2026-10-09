@@ -24,27 +24,27 @@ class KnowledgeExtractDetailTest < ActiveSupport::TestCase
       prompt = Extractor.prompt_for(level)
       assert_includes prompt, '"problem"', level
       assert_includes prompt, '"has_solution"', level
-      assert_includes prompt, 'Betreff:', level
+      assert_includes prompt, 'Тема:', level
     end
   end
 
   def test_general_is_the_previous_default_prompt
     assert_equal Extractor::DEFAULT_PROMPT, Extractor.prompt_for('general')
-    assert_includes Extractor::DEFAULT_PROMPT, 'verallgemeinert'
+    assert_includes Extractor::DEFAULT_PROMPT, 'обобщенно'
   end
 
   def test_finer_levels_keep_details_but_never_secrets
     specific = Extractor.prompt_for('specific')
     most     = Extractor.prompt_for('most_specific')
-    assert_includes specific, 'Fehlercode'
-    assert_includes most, 'Pfade'
-    assert_includes most, 'Verallgemeinere'
-    [specific, most].each { |p| assert_includes p, 'Passwoerter' }
+    assert_includes specific, 'код ошибки'
+    assert_includes most, 'пути файлов'
+    assert_includes most, 'обобщай'
+    [specific, most].each { |p| assert_includes p, 'пароли' }
   end
 
   # The docs promise no credentials/personal data at any level - general too.
   def test_privacy_rule_is_sent_at_every_level
-    Extractor::DETAIL_LEVELS.each { |l| assert_includes Extractor.prompt_for(l), 'personenbezogenen Daten', l }
+    Extractor::DETAIL_LEVELS.each { |l| assert_includes Extractor.prompt_for(l), 'персональные данные', l }
   end
 
   # Own prompts (central or project override) keep the privacy instruction -
@@ -52,13 +52,13 @@ class KnowledgeExtractDetailTest < ActiveSupport::TestCase
   def test_own_prompts_keep_the_privacy_rule
     own = Extractor.with_privacy('Eigener Prompt')
     assert own.start_with?('Eigener Prompt')
-    assert_includes own, 'personenbezogenen Daten'
+    assert_includes own, 'персональные данные'
     assert_equal own, Extractor.with_privacy(own)
     assert_equal Extractor.prompt_for('specific'), Extractor.with_privacy(Extractor.prompt_for('specific'))
 
     @ps.kb_extract_prompt = 'Nur JSON bitte.'
     @ps.kb_extract_prompt_mode = 'override'
-    assert_includes @ps.effective_kb_extract_prompt({}), 'personenbezogenen Daten'
+    assert_includes @ps.effective_kb_extract_prompt({}), 'персональные данные'
   end
 
   # The 0.20.3 default (no privacy sentence) sits in existing installs' settings.

@@ -1,9 +1,9 @@
 require 'base64'
 
-# Antwort an den Kunden direkt aus dem Ticket heraus.
-# Die Antwort wird mit Header-/Footer-Template des Postfachs versehen,
-# via Graph sendMail aus dem Projektpostfach versendet und
-# zusaetzlich als Kommentar (Journal) am Ticket dokumentiert.
+# Reply to the customer directly from the ticket.
+# The reply is wrapped with the mailbox's header/footer template, sent via
+# Graph sendMail from the project mailbox, and additionally documented as a
+# comment (journal) on the ticket.
 class HelpdeskRepliesController < ApplicationController
   before_action :find_issue
   before_action :authorize_reply
@@ -21,7 +21,7 @@ class HelpdeskRepliesController < ApplicationController
       return
     end
 
-    # Notizinhalt (Wiki-Markup) aus dem Redmine-Notizfeld
+    # Note content (wiki markup) from the Redmine note field
     note = params[:note_content].to_s
     if note.strip.blank?
       render :json => { :success => false, :error => l(:error_helpdesk_empty_reply) },
@@ -33,13 +33,13 @@ class HelpdeskRepliesController < ApplicationController
     reply_cc  = params[:reply_cc].to_s.strip.gsub(/[\s,;]+\z/, '')
     reply_bcc = params[:reply_bcc].to_s.strip.gsub(/[\s,;]+\z/, '')
 
-    # Betreff aus Projekteinstellungen mit Makro-Auswertung
+    # Subject from the project settings with macro evaluation
     project_setting  = HelpdeskProjectSetting.for_project(@project)
     subject_template = project_setting.effective_subject_template
     context = { :issue => @issue, :contact => contact, :user => User.current }
     subject = RedmineExpertHelpdesk::TemplateRenderer.render(subject_template, context)
 
-    # Wiki-Markup → HTML fuer den E-Mail-Body
+    # Wiki markup → HTML for the e-mail body
     wiki_html = begin
       Redmine::WikiFormatting.formatter.new(note).to_html.to_s
     rescue StandardError
@@ -50,12 +50,12 @@ class HelpdeskRepliesController < ApplicationController
     footer_html = plain_to_html(RedmineExpertHelpdesk::TemplateRenderer.render(mailbox.effective_footer_template, context))
     body_html = [header_html, wiki_html, footer_html].reject(&:blank?).join("\n")
 
-    # Anhaenge: nur IDs zulassen, die tatsaechlich zum Ticket gehoeren
+    # Attachments: only allow IDs that actually belong to the ticket
     attachment_ids = Array(params[:attachment_ids]).map(&:to_i).reject(&:zero?)
     sent_filenames = []
     valid_att_ids  = attachment_ids.any? ? (attachment_ids & @issue.attachments.pluck(:id)) : []
 
-    # Pending-Anhaenge (eingefuegte Bilder, noch nicht gespeichert) per Token
+    # Pending attachments (inserted images, not yet saved) by token
     inline_tokens = Array(params[:inline_attachment_tokens]).map(&:to_s).reject(&:blank?).first(20)
     inline_atts   = inline_tokens.filter_map { |tok| Attachment.find_by_token(tok) }
                                  .select { |a| a.author_id == User.current.id }
@@ -71,11 +71,11 @@ class HelpdeskRepliesController < ApplicationController
       message_id = send_reply_smtp(mailbox, reply_to, reply_cc, reply_bcc, subject, processed_html,
                                    valid_att_ids, embedded_atts, sent_filenames)
     else
-      # Roher MIME-Versand fuer zuverlaessige CID-Inline-Bilder – sowohl ueber
-      # die Graph-API als auch ueber den eigenen SMTP-Server des Postfachs.
-      # Der JSON-Ansatz funktioniert nicht, weil Exchange das HTML vor Zustellung
-      # umschreibt und dabei cid:-Referenzen und isInline-Anhaenge entkoppelt.
-      # Mit Content-Type: text/plain + base64-MIME bleibt die MIME-Struktur erhalten.
+      # Raw MIME delivery for reliable CID inline images – both via the Graph
+      # API and via the mailbox's own SMTP server. The JSON approach does not
+      # work because Exchange rewrites the HTML before delivery and in doing so
+      # separates cid: references from isInline attachments. With
+      # Content-Type: text/plain + base64 MIME the MIME structure is preserved.
       message_id             = generate_message_id(mailbox.mailbox_address)
       regular_atts           = Attachment.where(:id => valid_att_ids).to_a
       cid_map, html_with_cid = RedmineExpertHelpdesk::ReplyImages.to_cid(body_html, image_atts)
@@ -104,15 +104,15 @@ class HelpdeskRepliesController < ApplicationController
       :recipient_cc      => reply_cc.presence,
       :recipient_bcc     => reply_bcc.presence,
       :sent_attachments  => sent_filenames.join(', ').presence,
-      # Der Text kam aus einem KI-Antwortvorschlag - auch wenn der Bearbeiter ihn
-      # ueberarbeitet hat. KnowledgeExtractor laesst solche Antworten spaeter aus,
-      # damit das Modell nicht seine eigene Ausgabe als Wahrheit einliest.
+      # The text came from an AI answer draft - even if the agent revised it.
+      # KnowledgeExtractor later excludes such answers, so the model does not
+      # read its own output back in as truth.
       :ai_drafted        => params[:hd_ai_drafted].to_s == '1'
     )
 
-    # ID zurueckgeben: das Formular schickt sie beim Issue-Update als Hidden-Field
-    # mit, der controller_issues_edit_after_save-Hook verknuepft dann das Journal.
-    # SLA: Kundenantwort stoppt die Reaktionsuhr.
+    # Return the ID: the form sends it along with the issue update as a hidden
+    # field, and the controller_issues_edit_after_save hook then links the journal.
+    # SLA: a customer reply stops the reaction clock.
     RedmineExpertHelpdesk::Sla.record_first_response!(@issue, Time.current, :by => User.current)
 
     render :json => { :success => true, :helpdesk_message_id => hd_msg.id }
@@ -130,15 +130,15 @@ class HelpdeskRepliesController < ApplicationController
     end
   end
 
-  # Wandelt einfachen Plaintext in minimal-HTML um (fuer Header-/Footer-Templates).
+  # Converts simple plain text into minimal HTML (for header/footer templates).
   def plain_to_html(text)
     return '' if text.blank?
     return text if text.include?('<') && text.include?('>')
     '<p>' + ERB::Util.html_escape(text).gsub(/\n{2,}/, '</p><p>').gsub("\n", '<br>') + '</p>'
   end
 
-  # Sendet die Antwort via Redmines konfiguriertem SMTP-Transport.
-  # Gibt die Message-ID der gesendeten Mail zurueck.
+  # Sends the reply via Redmine's configured SMTP transport.
+  # Returns the message ID of the sent mail.
   def send_reply_smtp(mailbox, to, cc, bcc, subject, body_html, att_ids, embedded_atts, sent_filenames)
     mail_obj             = Mail.new
     mail_obj.message_id  = generate_message_id(mailbox.mailbox_address)
@@ -182,9 +182,9 @@ class HelpdeskRepliesController < ApplicationController
     mail_obj.message_id
   end
 
-  # Erstellt eine vollstaendige RFC-2822-MIME-Nachricht mit CID-Inline-Bildern.
-  # Die Nachricht wird anschliessend per Graph-API-MIME-Endpunkt versendet
-  # (Content-Type: text/plain, Body: Base64 der MIME-Nachricht).
+  # Builds a complete RFC 2822 MIME message with CID inline images.
+  # The message is then sent via the Graph API MIME endpoint
+  # (Content-Type: text/plain, body: Base64 of the MIME message).
   def build_cid_mime(from, to, cc, bcc, subject, body_html, cid_map, regular_atts, message_id = nil)
     bnd_mixed   = "mix#{SecureRandom.hex(10)}"
     bnd_related = "rel#{SecureRandom.hex(10)}"
@@ -225,7 +225,7 @@ class HelpdeskRepliesController < ApplicationController
       ln << "--#{bnd_mixed}"
     end
 
-    # HTML-Teil
+    # HTML part
     ln << "Content-Type: text/html; charset=\"UTF-8\""
     ln << "Content-Transfer-Encoding: base64"
     ln << ""
@@ -268,18 +268,18 @@ class HelpdeskRepliesController < ApplicationController
     ln.join("\r\n")
   end
 
-  # Base64-kodiert einen String fuer MIME (Zeilenumbruch alle 76 Zeichen, CRLF).
+  # Base64-encodes a string for MIME (line break every 76 characters, CRLF).
   def mime_base64(data)
     raw = data.dup.force_encoding('BINARY')
     Base64.encode64(raw).gsub(/\r?\n/, "\r\n").chomp
   end
 
-  # RFC-2047-kodiert den E-Mail-Betreff wenn er Nicht-ASCII-Zeichen enthaelt.
+  # RFC 2047-encodes the e-mail subject when it contains non-ASCII characters.
   def mime_encode_subject(str)
     str.ascii_only? ? str : "=?UTF-8?B?#{Base64.strict_encode64(str.encode('UTF-8'))}?="
   end
 
-  # Generiert eine eindeutige RFC-2822-Message-ID.
+  # Generates a unique RFC 2822 message ID.
   def generate_message_id(from_address)
     domain = from_address.to_s.split('@').last.presence || 'helpdesk.local'
     "<#{SecureRandom.uuid}@#{domain}>"

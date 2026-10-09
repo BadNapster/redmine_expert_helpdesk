@@ -354,7 +354,7 @@ ISSUE_COUNT.times do |i|
   issue.reload
   RedmineExpertHelpdesk::Sla.refresh_deadlines!(issue)
 
-  # Inbound mail — drives the Kunde column, the contacts tab counters and the
+  # Inbound mail — drives the customer column, the contacts tab counters and the
   # busiest-hour / busiest-weekday charts.
   HelpdeskMessage.create!(
     issue: issue, helpdesk_contact: contact, helpdesk_mailbox: mailbox,

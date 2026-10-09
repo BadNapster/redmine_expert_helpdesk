@@ -23,7 +23,7 @@ class HelpdeskAiSummaryJobTest < ActiveSupport::TestCase
 
   def test_build_input_puts_the_subject_first
     input = build('Bitte um Hilfe.', :subject => ' Drucker HP 4050 druckt nicht ')
-    assert_equal "Betreff: Drucker HP 4050 druckt nicht\n\nBitte um Hilfe.", input
+    assert_equal "Тема: Drucker HP 4050 druckt nicht\n\nBitte um Hilfe.", input
   end
 
   def test_build_input_without_subject_is_unchanged
@@ -35,7 +35,7 @@ class HelpdeskAiSummaryJobTest < ActiveSupport::TestCase
   # the subject.
   def test_truncation_keeps_the_subject
     input = build('x' * 500, :subject => 'Drucker', :max => 30)
-    assert input.start_with?("Betreff: Drucker\n\nxxx"), input
+    assert input.start_with?("Тема: Drucker\n\nxxx"), input
     assert_equal 30, input.length
   end
 
@@ -56,7 +56,7 @@ class HelpdeskAiSummaryJobTest < ActiveSupport::TestCase
 
   # The job labels the subject with this marker - the prompt must explain it.
   def test_default_prompt_mentions_the_subject
-    assert_includes RedmineExpertHelpdesk::AiClient::DEFAULT_PROMPT, 'Betreff:'
+    assert_includes RedmineExpertHelpdesk::AiClient::DEFAULT_PROMPT, 'Тема:'
   end
 
   def test_skips_when_globally_disabled

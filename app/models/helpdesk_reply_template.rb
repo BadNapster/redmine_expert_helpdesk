@@ -1,4 +1,4 @@
-# An answer template ("Textbaustein") an agent can insert into the note field.
+# An answer template an agent can insert into the note field.
 # project_id NULL = global template, offered in every helpdesk project;
 # otherwise the template belongs to that project alone.
 #

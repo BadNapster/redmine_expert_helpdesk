@@ -1,4 +1,4 @@
-# Benachrichtigung bei SLA-Ueberschreitung (an Eskalationsadresse / Projekt-User).
+# Notification on SLA breach (to the escalation address / project users).
 class HelpdeskSlaMailer < Mailer
   def sla_breach(recipients, issue, breached_clocks, state)
     @issue   = issue

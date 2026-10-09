@@ -1,5 +1,5 @@
-# SLA-Zielzeiten je Prioritaet (Override der Projekt-Defaults).
-# Leere Minuten-Werte bedeuten: der Projekt-Default gilt.
+# SLA target times per priority (override of the project defaults).
+# Empty minute values mean: the project default applies.
 class HelpdeskSlaPriority < HelpdeskApplicationRecord
   belongs_to :project
   belongs_to :priority, :class_name => 'IssuePriority'

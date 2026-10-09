@@ -10,7 +10,7 @@ class KnowledgeExtractorTest < ActiveSupport::TestCase
   def test_ticket_text_starts_with_the_subject
     issue = Issue.new(:subject => '  Drucker HP 4050: Fehler 49.4C02 ', :description => 'Geht nicht.')
     text = extractor.send(:ticket_text, issue)
-    assert text.start_with?("Betreff: Drucker HP 4050: Fehler 49.4C02\n\nGeht nicht."), text
+    assert text.start_with?("Тема: Drucker HP 4050: Fehler 49.4C02\n\nGeht nicht."), text
   end
 
   def test_ticket_text_without_subject_has_no_marker
@@ -19,7 +19,7 @@ class KnowledgeExtractorTest < ActiveSupport::TestCase
   end
 
   def test_default_prompt_mentions_the_subject
-    assert_includes RedmineExpertHelpdesk::KnowledgeExtractor::DEFAULT_PROMPT, 'Betreff:'
+    assert_includes RedmineExpertHelpdesk::KnowledgeExtractor::DEFAULT_PROMPT, 'Тема:'
   end
 
   def test_parse_plain_json

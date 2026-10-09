@@ -1,4 +1,4 @@
-<%# SLA-Statistik des Projekts (Diagramme via Chart.js, lokal gebundelt) %>
+<%# SLA statistics for the project (charts via Chart.js, bundled locally) %>
 <% html_title l(:label_helpdesk_sla_statistics) %>
 <% content_for :header_tags do %>
   <%= javascript_include_tag 'chart.umd.min', 'chartjs-plugin-datalabels.min', 'helpdesk_sla_stats', :plugin => 'redmine_expert_helpdesk' %>
@@ -17,7 +17,7 @@
 <% if totals[:tickets] == 0 %>
   <p class="nodata"><%= l(:label_helpdesk_stats_no_data) %></p>
 <% else %>
-  <%# --- KPI-Kacheln --- %>
+  <%# --- KPI tiles --- %>
   <div class="hd-stats-tiles">
     <div class="hd-stats-tile">
       <span class="hd-stats-num"><%= totals[:tickets] %></span>
@@ -47,7 +47,7 @@
     </div>
   </div>
 
-  <%# --- SLA-Erfuellung --- %>
+  <%# --- SLA compliance --- %>
   <h3><%= l(:label_helpdesk_stats_compliance) %></h3>
   <div class="hd-chart-box hd-chart-box-sm"><canvas id="hd-chart-compliance"></canvas></div>
   <p class="hd-stats-muted">
@@ -62,15 +62,15 @@
     <% end %>
   </p>
 
-  <%# --- Ticketvolumen --- %>
+  <%# --- Ticket volume --- %>
   <h3><%= l(:label_helpdesk_stats_volume) %></h3>
   <div class="hd-chart-box"><canvas id="hd-chart-volume"></canvas></div>
 
-  <%# --- Durchschnittszeiten im Zeitverlauf --- %>
+  <%# --- Average times over time --- %>
   <h3><%= l(:label_helpdesk_stats_avg_over_time) %></h3>
   <div class="hd-chart-box"><canvas id="hd-chart-avg"></canvas></div>
 
-  <%# --- Stosszeiten --- %>
+  <%# --- Peak times --- %>
   <div class="hd-stats-busy">
     <div class="hd-stats-busy-col">
       <h3><%= l(:label_helpdesk_stats_busiest_hours) %></h3>

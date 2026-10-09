@@ -1,7 +1,7 @@
-# Autoritative Zuordnung Ticket -> Kunde/Ursprungspostfach (eine Zeile pro Ticket).
-# Wird beim ersten Mail-Eingang, beim manuellen Zuordnen (Init) und beim
-# Legacy-Import gesetzt. Ersetzt die fruehere Konvention "Kontakt der ersten
-# HelpdeskMessage = Kunde des Tickets".
+# Authoritative assignment Ticket -> customer/origin mailbox (one row per ticket).
+# Set on the first mail ingress, on manual assignment (Init) and on legacy
+# import. Replaces the earlier convention "contact of the first HelpdeskMessage =
+# the ticket's customer".
 class HelpdeskTicketInfo < HelpdeskApplicationRecord
   belongs_to :issue
   belongs_to :helpdesk_contact, :optional => true
@@ -25,8 +25,8 @@ class HelpdeskTicketInfo < HelpdeskApplicationRecord
     find_by(:issue_id => issue.is_a?(Issue) ? issue.id : issue)
   end
 
-  # Setzt Kunde/Ursprungspostfach eines Tickets. Bereits gesetzte Werte werden
-  # nicht ueberschrieben (der Erstkontakt bleibt der Kunde des Tickets).
+  # Sets the customer/origin mailbox of a ticket. Already-set values are not
+  # overwritten (the first contact stays the ticket's customer).
   def self.link!(issue, contact, mailbox = nil)
     info = find_or_initialize_by(:issue_id => issue.id)
     info.helpdesk_contact ||= contact

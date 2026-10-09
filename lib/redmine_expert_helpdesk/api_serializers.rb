@@ -1,11 +1,11 @@
-# Gemeinsame Serialisierer fuer die REST-API. Schreiben ein Objekt auf den
-# Redmine-`api`-Builder (aus den .api.rsb-Templates), damit JSON und XML aus
-# einer Quelle erzeugt werden. Reine Hilfsfunktionen ohne Rendering-Annahmen.
+# Shared serializers for the REST API. Write an object onto the Redmine `api`
+# builder (from the .api.rsb templates), so JSON and XML are produced from one
+# source. Pure helper functions without rendering assumptions.
 module RedmineExpertHelpdesk
   module ApiSerializers
     module_function
 
-    # Kunde/Kontakt (Helpdesk).
+    # Customer/contact (Helpdesk).
     def contact(api, c)
       return if c.nil?
 
@@ -23,7 +23,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Kompakte Kontakt-Referenz (in Ticket eingebettet).
+    # Compact contact reference (embedded in a ticket).
     def contact_ref(api, c)
       return if c.nil?
 
@@ -36,7 +36,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Ursprungspostfach-Referenz.
+    # Origin mailbox reference.
     # `provider` is part of the reference so a consumer can tell a Graph mailbox
     # from an IMAP one without fetching the full mailbox.
     def mailbox_ref(api, mailbox)
@@ -144,7 +144,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Ergebnis von MailProvider#test_connection.
+    # Result of MailProvider#test_connection.
     def connection_test(api, result)
       api.connection_test do
         api.ok      result[:ok] ? true : false
@@ -158,7 +158,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # SLA-Zustand aus Sla.state_for ({ :reaction => clock|nil, :solution => clock|nil } | nil).
+    # SLA state from Sla.state_for ({ :reaction => clock|nil, :solution => clock|nil } | nil).
     def sla_state(api, state)
       return if state.nil?
 
@@ -179,8 +179,8 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Helpdesk-Ticket = Redmine-Issue + Zusatzdaten. detail=true fuegt
-    # Beschreibung und Nachrichtenverlauf hinzu (Einzelansicht).
+    # Helpdesk ticket = Redmine issue + extra data. detail=true adds the
+    # description and the message history (single view).
     def ticket(api, issue, info: nil, sla: nil, messages: [], detail: false)
       api.helpdesk_ticket do
         api.id issue.id
@@ -209,8 +209,8 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Projekt-Helpdesk-Einstellungen (Antwort-, Phishing-, SLA-Konfiguration) inkl.
-    # der Prioritaets-Overrides (HelpdeskSlaPriority).
+    # Project helpdesk settings (reply, phishing, SLA configuration) including the
+    # priority overrides (HelpdeskSlaPriority).
     def project_setting(api, s, priorities = [])
       api.helpdesk_project_setting do
         api.project(:id => s.project_id)
@@ -232,13 +232,13 @@ module RedmineExpertHelpdesk
         api.sla_enabled_at          s.sla_enabled_at
         api.sla_reaction_minutes    s.sla_reaction_minutes
         api.sla_solution_minutes    s.sla_solution_minutes
-        api.sla_work_days           s.sla_work_days   # CSV der ISO-Wochentage (1=Mo..7=So)
+        api.sla_work_days           s.sla_work_days   # CSV of ISO weekdays (1=Mon..7=Sun)
         api.sla_work_start          s.sla_work_start
         api.sla_work_end            s.sla_work_end
         api.sla_notify_enabled      s.sla_notify_enabled
         api.sla_notify_email        s.sla_notify_email
         api.sla_notify_user_id      s.sla_notify_user_id
-        # KI-Zusammenfassung (opt-in je Projekt).
+        # AI summary (opt-in per project).
         api.ai_summary_enabled      s.ai_summary_enabled
         api.ai_summary_scope        s.ai_summary_scope
         api.ai_prompt_mode          s.ai_prompt_mode
@@ -264,12 +264,12 @@ module RedmineExpertHelpdesk
         api.info_request_body               s.info_request_body
         api.info_request_note_visibility    s.info_request_note_visibility
         api.info_request_status_id          s.info_request_status_id
-        # KI-Antwortvorschlag (kundengerichtet).
+        # AI answer draft (customer-facing).
         api.ai_answer_enabled       s.ai_answer_enabled?
         api.ai_answer_prompt_mode   s.ai_answer_prompt_mode
         api.ai_answer_prompt        s.ai_answer_prompt
         api.ai_answer_min_score     s.ai_answer_min_score
-        # Wissensbasis (RAG).
+        # Knowledge base (RAG).
         api.kb_ingest_mode          s.kb_ingest_mode
         api.kb_proposal_display     s.kb_proposal_display
         if s.has_attribute?(:kb_extract_detail)
@@ -291,7 +291,7 @@ module RedmineExpertHelpdesk
       end
     end
 
-    # Einzelne Helpdesk-Nachricht (Nachrichtenverlauf eines Tickets).
+    # Single helpdesk message (a ticket's message history).
     def message(api, m)
       api.message do
         api.id        m.id

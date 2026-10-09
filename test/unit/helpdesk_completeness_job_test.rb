@@ -195,7 +195,7 @@ class HelpdeskCompletenessJobTest < ActiveSupport::TestCase
     RedmineExpertHelpdesk::AiClient.any_instance.stubs(:configured?).returns(true)
     RedmineExpertHelpdesk::AiClient.any_instance
       .expects(:summarize)
-      .with { |_prompt, input, *_rest| input.start_with?("Betreff: #{LONG_SUBJECT}\n\nkaputt") }
+      .with { |_prompt, input, *_rest| input.start_with?("Тема: #{LONG_SUBJECT}\n\nkaputt") }
       .returns('{"complete": true, "missing": []}')
     RedmineExpertHelpdesk::InfoRequestMailer.expects(:deliver!).never
     HelpdeskCompletenessJob.perform_now(@issue.id)

@@ -1,7 +1,7 @@
-# Wissensbasis-Eintrag (System of Record) je geloestem Ticket. Haelt das extrahierte
-# {Problem, Loesung}, den Kuratierungsstatus und die Referenz auf den
-# Vektor-Punkt im externen Store. Nur `approved`-Eintraege sind im Vektor-Store
-# und damit fuer die Suche sichtbar.
+# Knowledge base entry (system of record) per solved ticket. Holds the extracted
+# {problem, solution}, the curation status and the reference to the vector point
+# in the external store. Only `approved` entries are in the vector store and
+# therefore visible to the search.
 #
 # The vector store holds a copy only: editing a payload there leaves the vector
 # computed from the old text, so every change goes through this row and is

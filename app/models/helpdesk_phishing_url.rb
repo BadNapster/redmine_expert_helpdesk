@@ -1,10 +1,10 @@
-# Lokaler Spiegel der PhishTank-Datenbank.
-# Eine Zeile pro bekannter Phishing-URL; Lookup erfolgt ueber den SHA-256-Hash
-# der normalisierten URL (Index), nicht ueber die URL selbst (TEXT-Spalte).
+# Local mirror of the PhishTank database.
+# One row per known phishing URL; lookup happens via the SHA-256 hash of the
+# normalized URL (index), not via the URL itself (TEXT column).
 require 'digest'
 
 class HelpdeskPhishingUrl < HelpdeskApplicationRecord
-  # Feed-Quellen des Spiegels
+  # Feed sources of the mirror
   SOURCES = %w[phishtank phishing_database].freeze
 
   BATCH_SIZE = 1000
@@ -12,8 +12,8 @@ class HelpdeskPhishingUrl < HelpdeskApplicationRecord
   validates :url,      :presence => true
   validates :url_hash, :presence => true, :uniqueness => true
 
-  # Normalisiert eine URL fuer den Vergleich:
-  # Schema und Host kleinschreiben, Fragment entfernen, Trailing-Slash des Pfads entfernen.
+  # Normalizes a URL for comparison:
+  # lowercases scheme and host, removes the fragment, removes trailing slashes of the path.
   def self.normalize(url)
     u = url.to_s.strip
     return '' if u.empty?
@@ -35,7 +35,7 @@ class HelpdeskPhishingUrl < HelpdeskApplicationRecord
     Digest::SHA256.hexdigest(normalize(url))
   end
 
-  # Sucht eine URL im Spiegel. Liefert den Datensatz oder nil.
+  # Looks up a URL in the mirror. Returns the record or nil.
   def self.lookup(url)
     normalized = normalize(url)
     return nil if normalized.empty?
@@ -43,7 +43,7 @@ class HelpdeskPhishingUrl < HelpdeskApplicationRecord
     find_by(:url_hash => Digest::SHA256.hexdigest(normalized))
   end
 
-  # Ist die Quelle (bzw. der gesamte Spiegel) aelter als das Intervall oder leer?
+  # Is the source (or the whole mirror) older than the interval or empty?
   def self.stale?(interval_hours, source = nil)
     scope = source.present? ? where(:source => source) : all
     last_import = scope.maximum(:imported_at)
@@ -52,9 +52,9 @@ class HelpdeskPhishingUrl < HelpdeskApplicationRecord
     last_import < interval_hours.to_i.hours.ago
   end
 
-  # Ersetzt alle Eintraege einer Quelle in einer Transaktion.
-  # Duplikate zu anderen Quellen (gleicher url_hash) werden von insert_all
-  # uebersprungen (Unique-Index). Liefert die Anzahl der Rows.
+  # Replaces all entries of one source in a transaction.
+  # Duplicates from other sources (same url_hash) are skipped by insert_all
+  # (unique index). Returns the number of rows.
   def self.replace_source!(source, rows)
     with_utf8mb4_connection do
       transaction do
@@ -67,10 +67,10 @@ class HelpdeskPhishingUrl < HelpdeskApplicationRecord
     rows.size
   end
 
-  # Stellt die Session waehrend des Imports auf utf8mb4 um.
-  # Hintergrund: Redmines database.yml nutzt encoding utf8 (= utf8mb3); der
-  # Server lehnt 4-Byte-UTF-8 (Homoglyphen-Domains in den Feeds) dann bereits
-  # auf Verbindungsebene ab, obwohl die Tabelle utf8mb4 ist.
+  # Switches the session to utf8mb4 during the import.
+  # Background: Redmine's database.yml uses encoding utf8 (= utf8mb3); the server
+  # then rejects 4-byte UTF-8 (homoglyph domains in the feeds) already at the
+  # connection level, even though the table is utf8mb4.
   def self.with_utf8mb4_connection
     conn = connection
     return yield unless conn.adapter_name =~ /mysql/i

@@ -1,14 +1,14 @@
 name: Docker image smoke test
 
-# Ergaenzt die quellbasierte CI (ci.yml): testet das Plugin gegen die *offiziellen*
-# Redmine-Docker-Images (https://hub.docker.com/_/redmine) — also genau die Images,
-# mit denen wir deployen. Pro Tag wird das offizielle Image mit einer frischen MariaDB
-# gestartet, das Plugin eingehaengt und ueber REDMINE_PLUGINS_MIGRATE migriert.
+# Complements the source-based CI (ci.yml): tests the plugin against the *official*
+# Redmine Docker images (https://hub.docker.com/_/redmine) - i.e. exactly the images
+# we deploy with. Per tag, the official image is started with a fresh MariaDB, the
+# plugin is mounted and migrated via REDMINE_PLUGINS_MIGRATE.
 #
-# Der offizielle Entrypoint laeuft mit `set -Eeo pipefail`: schlaegt eine Core- oder
-# Plugin-Migration bzw. das Laden von init.rb fehl, beendet sich der Container und die
-# Seite kommt nie hoch. Ein erfolgreiches `/login` (HTTP 200) beweist damit, dass das
-# Plugin im Produktions-Image sauber laedt und migriert.
+# The official entrypoint runs with `set -Eeo pipefail`: if a core or plugin
+# migration or the init.rb load fails, the container exits and the page never
+# comes up. A successful `/login` (HTTP 200) therefore proves that the plugin
+# loads and migrates cleanly in the production image.
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Aktuell von Docker Hub veroeffentlichte, unterstuetzte Redmine-Tags.
+        # Supported Redmine tags currently published on Docker Hub.
         tag: [ '5.1', '6.0', '6.1', '7.0' ]
 
     env:
@@ -81,7 +81,7 @@ jobs:
         run: |
           code=000
           for i in $(seq 1 60); do
-            # Bricht der Container ab (fehlgeschlagene Migration / init.rb), sofort scheitern.
+            # Fail immediately if the container exits (failed migration / init.rb).
             if [ "$(docker inspect -f '{{.State.Running}}' redmine 2>/dev/null)" != "true" ]; then
               echo "Redmine container exited early — dumping logs:"; docker logs redmine; exit 1
             fi
@@ -94,12 +94,12 @@ jobs:
 
       - name: Assert the plugin was actually loaded and migrated
         run: |
-          # Beim Plugin-Migrate erscheinen die Migrationsklassen des Plugins
-          # (== N CreateHelpdeskMailboxes: migrating ...). Case-insensitiv auf
-          # "helpdesk" pruefen — versionsunabhaengig (Redmine 5.x nennt im Header
-          # den Plugin-*Namen* "Redmine expert Helpdesk", 6.x/7.x die *ID*
-          # "redmine_expert_helpdesk"; die Migrationsnamen enthalten immer "Helpdesk").
-          # Fehlt jede Helpdesk-Ausgabe, wurde das Plugin nicht eingehaengt/erkannt.
+          # Plugin migrations print the plugin's migration classes
+          # (== N CreateHelpdeskMailboxes: migrating ...). Check case-insensitively
+          # for "helpdesk" - version-independent (Redmine 5.x prints the plugin
+          # *name* "Redmine expert Helpdesk" in the header, 6.x/7.x the *id*
+          # "redmine_expert_helpdesk"; the migration names always contain "Helpdesk").
+          # Without any helpdesk output, the plugin was not mounted/recognized.
           if ! docker logs redmine 2>&1 | grep -iq 'helpdesk'; then
             echo "No helpdesk output in Redmine logs — plugin not mounted/migrated:"
             docker logs redmine

@@ -1,5 +1,5 @@
-# Manueller Import der Altdaten aus redmine_contacts / redmine_contacts_helpdesk
-# (Button in den Plugin-Einstellungen, nur Administratoren).
+# Manual import of the legacy data from redmine_contacts / redmine_contacts_helpdesk
+# (button in the plugin settings, administrators only).
 #
 # Import and attachment repair run as HelpdeskLegacyImportJob: the POST only
 # records a HelpdeskLegacyImportRun and redirects to its status page, which polls
@@ -10,7 +10,7 @@ class HelpdeskLegacyImportController < ApplicationController
   before_action :redirect_to_current_run, :only => [:new, :import, :attachments, :fix_attachments]
   before_action :find_run, :only => [:show, :poll]
 
-  # Auswahlseite: welche Projekte (Alt-Kontakte) sollen importiert werden?
+  # Selection page: which projects (legacy contacts) should be imported?
   def new
     unless RedmineExpertHelpdesk::LegacyContactsImport.available?
       flash[:error] = l(:error_helpdesk_legacy_import_no_data)

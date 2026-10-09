@@ -1,4 +1,4 @@
-# Folder an IMAP mailbox files its outgoing mail in.
+# Folder where an IMAP mailbox files its outgoing mail.
 #
 # Graph's sendMail saves a copy to Sent Items on its own; a plain SMTP server
 # does not, so a shared IMAP helpdesk mailbox would show only the inbound half

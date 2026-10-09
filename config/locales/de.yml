@@ -126,6 +126,24 @@ de:
   error_helpdesk_provider_not_configured: Der Mail-Anbieter ist nicht vollständig konfiguriert.
   error_helpdesk_missing_parameters: Parameter fehlen.
   error_helpdesk_access_denied: Zugriff verweigert.
+  error_helpdesk_invalid_api_key: Ungültiger API-Key.
+  button_helpdesk_load_folders: 'Ordner laden'
+  title_helpdesk_load_folders: 'Ordnerliste vom Postfach laden'
+  label_helpdesk_show_folder_list: 'Ordnerliste anzeigen'
+  label_helpdesk_create_folder: 'anlegen'
+  label_helpdesk_error_prefix: 'Fehler:'
+  label_helpdesk_unknown_error: 'unbekannt'
+  text_helpdesk_no_folders_loaded: 'Noch keine Ordner geladen – „%{button}“ verwenden'
+  text_helpdesk_no_folders_present: 'Keine Ordner vorhanden'
+  text_helpdesk_loading_folders: 'Lade Ordner…'
+  text_helpdesk_folders_loaded: 'Ordner geladen:'
+  text_helpdesk_creating_folders: 'Erstelle Ordner…'
+  text_helpdesk_confirm_create_folders: 'Die Ordner %{names} existieren noch nicht. Jetzt im Postfach anlegen?'
+  error_helpdesk_network_error: 'Netzwerkfehler'
+  error_helpdesk_folder_creation_failed: 'Ordner konnte nicht erstellt werden:'
+  text_helpdesk_azure_hint_graph: 'Graph-Postfächer: Application-Permissions <code>Mail.ReadWrite</code>, <code>Mail.Send</code> (Admin-Consent erforderlich)'
+  text_helpdesk_azure_hint_imap: 'IMAP/SMTP-Postfächer (nur Anwendung): <code>IMAP.AccessAsApp</code>, <code>SMTP.SendAsApp</code>'
+  text_helpdesk_azure_hint_policy: 'Zugriff per <code>ApplicationAccessPolicy</code> auf die Helpdesk-Postfächer einschränken'
 
   label_helpdesk_reopen: Status bei Kundenantwort
   field_helpdesk_reopen_status: Status (geschlossenes Ticket)
@@ -502,6 +520,9 @@ de:
   label_helpdesk_mail_footer_preview: Signatur-Vorschau
   label_helpdesk_reply_addresses_hint: "Mehrere Adressen mit Komma trennen"
   label_helpdesk_reply_attachments: "Anhänge"
+  label_helpdesk_sent_attachments_count:
+    one: '%{count} Anhang'
+    other: '%{count} Anhänge'
   button_helpdesk_add_original_recipients: "Originalempfänger"
   title_helpdesk_original_recipients: "Empfänger der ursprünglichen Kunden-E-Mail"
   field_helpdesk_reply_transport: "Versandweg"

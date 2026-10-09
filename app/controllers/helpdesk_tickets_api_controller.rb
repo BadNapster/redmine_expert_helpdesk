@@ -1,9 +1,9 @@
-# REST-API fuer Helpdesk-Tickets (= Redmine-Issues mit Helpdesk-Zusatzdaten:
-# Kunde, Postfach, SLA-Zustand, Nachrichtenverlauf). JSON/XML via .api.rsb.
+# REST API for helpdesk tickets (= Redmine issues with helpdesk add-on data:
+# customer, mailbox, SLA state, message history). JSON/XML via .api.rsb.
 #
-# Die Issue-Persistenz delegiert an das Redmine-Issue-Modell (safe_attributes),
-# es wird keine Ticket-Logik nachgebaut. Autorisierung nutzt die Kern-Issue-
-# Berechtigungen (view/add/edit/delete_issues) plus aktives Helpdesk-Modul.
+# Issue persistence is delegated to the Redmine issue model (safe_attributes);
+# no ticket logic is re-implemented. Authorization uses the core issue
+# permissions (view/add/edit/delete_issues) plus an active helpdesk module.
 class HelpdeskTicketsApiController < ApplicationController
   before_action :find_project_by_project_id, :only => [:index, :create]
   before_action :find_ticket,                :only => [:show, :update, :destroy]
@@ -86,7 +86,7 @@ class HelpdeskTicketsApiController < ApplicationController
       end
   end
 
-  # Optionale Kundenzuordnung ueber contact_id oder contact_email.
+  # Optional customer assignment via contact_id or contact_email.
   def assign_contact(issue)
     attrs = params[:helpdesk_ticket] || {}
     contact =

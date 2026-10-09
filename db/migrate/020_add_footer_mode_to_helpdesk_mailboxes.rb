@@ -1,7 +1,7 @@
-# Steuerung, wie die Postfach-Fusszeile mit der zentralen Signatur kombiniert wird:
-#   inherit  - zentrale Signatur verwenden (Standard)
-#   prepend  - Postfach-Fusszeile VOR der zentralen Signatur einfuegen
-#   override - nur die Postfach-Fusszeile verwenden
+# Controls how the mailbox footer is combined with the central signature:
+#   inherit  - use the central signature (default)
+#   prepend  - insert the mailbox footer BEFORE the central signature
+#   override - use only the mailbox footer
 class AddFooterModeToHelpdeskMailboxes < ActiveRecord::Migration[6.1]
   def change
     unless column_exists?(:helpdesk_mailboxes, :footer_mode)

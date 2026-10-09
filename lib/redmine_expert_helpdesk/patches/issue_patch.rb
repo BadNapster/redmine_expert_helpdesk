@@ -54,9 +54,9 @@ module RedmineExpertHelpdesk
         helpdesk_customer_contact&.email
       end
 
-      # SLA-Status der Reaktionsuhr (nil, wenn kein SLA greift). Ohne erfasste
-      # Erstreaktion gilt bei geschlossenen Tickets der Schliesszeitpunkt als
-      # Abschluss (Reaktion laeuft nicht ueber das Loesen hinaus weiter).
+      # SLA status of the reaction clock (nil when no SLA applies). Without a recorded
+      # first reaction, the closing time counts as completion for closed tickets
+      # (the reaction does not keep running beyond the resolution).
       def helpdesk_sla_reaction
         info = HelpdeskTicketInfo.for_issue(self)
         return nil unless info
@@ -66,7 +66,7 @@ module RedmineExpertHelpdesk
           info.sla_reaction_due_at, info.sla_reaction_warn_at, done)
       end
 
-      # SLA-Status der Loesungsuhr (nil, wenn kein SLA greift).
+      # SLA status of the solution clock (nil when no SLA applies).
       def helpdesk_sla_solution
         info = HelpdeskTicketInfo.for_issue(self)
         return nil unless info
@@ -96,12 +96,12 @@ module RedmineExpertHelpdesk
 
         HelpdeskTicketInfo.clear_awaiting_agent!(self)
       rescue StandardError => e
-        Rails.logger.warn("Helpdesk: clear_awaiting_on_close fehlgeschlagen (Issue ##{id}): #{e.message}")
+        Rails.logger.warn("Helpdesk: clear_awaiting_on_close failed (Issue ##{id}): #{e.message}")
       end
 
-      # Nach dem Speichern die vorberechneten Faelligkeiten aktualisieren, aber
-      # nur wenn relevant (neu, Prioritaet geaendert oder noch nicht berechnet),
-      # um die Geschaeftszeit-Schleife nicht bei jedem Speichern zu durchlaufen.
+      # Update the precomputed deadlines after saving, but only when relevant
+      # (new, priority changed or not yet computed), so the business-hours loop
+      # is not run on every save.
       def helpdesk_refresh_sla_deadlines
         return unless project&.module_enabled?(:helpdesk)
 
@@ -112,10 +112,10 @@ module RedmineExpertHelpdesk
         RedmineExpertHelpdesk::Sla.refresh_deadlines!(self)
       end
 
-      # Beim Schliessen das geloeste Ticket in die Wissensbasis aufnehmen (async).
-      # Am Modell (after_save), damit auch Sammel-Aenderungen (Bulk-Update) und
-      # API-/Skript-Aenderungen erfasst werden, nicht nur Einzel-Updates ueber den
-      # Controller. Fehler duerfen das Speichern nicht abbrechen.
+      # On close, add the solved ticket to the knowledge base (async).
+      # At the model (after_save) so that bulk changes and API/script changes
+      # are captured too, not just single updates through the
+      # controller. Errors must not abort the save.
       def helpdesk_enqueue_kb_ingest
         return unless saved_change_to_status_id? && closed?
         return unless project&.module_enabled?(:helpdesk)
@@ -126,7 +126,7 @@ module RedmineExpertHelpdesk
 
         HelpdeskKnowledgeIngestJob.perform_later(id)
       rescue StandardError => e
-        Rails.logger.warn("Helpdesk: KB-Enqueue (after_save) fehlgeschlagen (Issue ##{id}): #{e.message}")
+        Rails.logger.warn("Helpdesk: KB enqueue (after_save) failed (Issue ##{id}): #{e.message}")
       end
     end
   end

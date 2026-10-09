@@ -1,8 +1,8 @@
-<%# Reiter "Helpdesk" in den Projekteinstellungen: Antworteinstellungen + Postfachliste %>
+<%# "Helpdesk" tab in the project settings: reply settings + mailbox list %>
 <% mailboxes = @project.helpdesk_mailboxes.order(:mailbox_address) %>
 <% hd_setting = HelpdeskProjectSetting.for_project(@project) %>
 
-<%# --- Antworteinstellungen --- %>
+<%# --- Reply settings --- %>
 <fieldset class="tabular" style="margin-bottom: 14px;">
   <legend><%= l(:label_helpdesk_reply_settings) %></legend>
   <%= form_tag helpdesk_project_setting_path(:project_id => @project), :method => :put do %>
@@ -243,7 +243,7 @@
   <% end %>
 </fieldset>
 
-<%# --- KI-Zusammenfassung (nur wenn zentral aktiviert) --- %>
+<%# --- AI summary (only when centrally enabled) --- %>
 <% if RedmineExpertHelpdesk::AiFeatures.ai_enabled? %>
   <fieldset class="tabular" style="margin-bottom: 14px;">
     <legend><%= l(:label_helpdesk_ai_summary) %></legend>
@@ -320,7 +320,7 @@
   </fieldset>
 <% end %>
 
-<%# --- KI-Antwortvorschlag (kundengerichtet), nur wenn zentral aktiviert --- %>
+<%# --- AI answer draft (customer-facing), only when centrally enabled --- %>
 <% if RedmineExpertHelpdesk::AiFeatures.answer_draft_enabled? %>
   <fieldset class="tabular" style="margin-bottom: 14px;">
     <legend><%= l(:label_helpdesk_ai_answer_settings) %></legend>
@@ -506,7 +506,7 @@
 </script>
 
 
-<%# --- Wissensbasis (RAG), nur wenn zentral aktiviert --- %>
+<%# --- Knowledge base (RAG), only when centrally enabled --- %>
 <% if RedmineExpertHelpdesk::AiFeatures.kb_enabled? %>
   <fieldset class="tabular" style="margin-bottom: 14px;">
     <legend><%= l(:label_helpdesk_kb_settings) %></legend>

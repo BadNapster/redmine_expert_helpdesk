@@ -1,10 +1,10 @@
 class AddProjectToHelpdeskContacts < ActiveRecord::Migration[6.1]
   def up
-    # project_id einfuegen (nullable, damit bestehende Daten erhalten bleiben)
+    # Insert project_id (nullable, so existing data is preserved)
     add_column :helpdesk_contacts, :project_id, :integer unless column_exists?(:helpdesk_contacts, :project_id)
     add_column :helpdesk_contacts, :phone,      :string  unless column_exists?(:helpdesk_contacts, :phone)
 
-    # Bestehende Kontakte: project_id aus dem ersten verknuepften Ticket uebernehmen
+    # Existing contacts: take over project_id from the first linked ticket
     execute <<~SQL
       UPDATE helpdesk_contacts hc
       SET    project_id = (
@@ -18,8 +18,8 @@ class AddProjectToHelpdeskContacts < ActiveRecord::Migration[6.1]
       WHERE  hc.project_id IS NULL
     SQL
 
-    # Doppelte Kontakte pro (email, project_id) zusammenfuehren:
-    # Nachrichten auf den ersten vorhandenen Kontakt umbiegen, Rest loeschen.
+    # Merge duplicate contacts per (email, project_id):
+    # re-point messages to the first existing contact, delete the rest.
     execute <<~SQL
       UPDATE helpdesk_messages hm
       SET    helpdesk_contact_id = (
@@ -40,7 +40,7 @@ class AddProjectToHelpdeskContacts < ActiveRecord::Migration[6.1]
       AND project_id IS NOT NULL
     SQL
 
-    # Alten eindeutigen Index auf email entfernen, neuen zusammengesetzten anlegen
+    # Remove the old unique index on email, create a new composite one
     remove_index  :helpdesk_contacts, :email rescue nil
     add_index     :helpdesk_contacts, [:email, :project_id], :unique => true,
                   :name => 'index_helpdesk_contacts_on_email_and_project'

@@ -1,6 +1,6 @@
-# REST-API fuer die projektbezogenen Helpdesk-Einstellungen (Singleton je Projekt).
-# JSON/XML via .api.rsb. Lesen: view_helpdesk_info oder manage_helpdesk;
-# Schreiben: manage_helpdesk. Partielles Update (nur uebergebene Felder).
+# REST API for the project-scoped helpdesk settings (singleton per project).
+# JSON/XML via .api.rsb. Read: view_helpdesk_info or manage_helpdesk;
+# write: manage_helpdesk. Partial update (only submitted fields).
 class HelpdeskProjectSettingsApiController < ApplicationController
   before_action :find_project_by_project_id
   before_action :require_helpdesk_module
@@ -51,8 +51,8 @@ class HelpdeskProjectSettingsApiController < ApplicationController
     @setting.sla_work_end           = hp[:sla_work_end]              if hp.key?(:sla_work_end)
     @setting.sla_notify_email       = hp[:sla_notify_email].presence  if hp.key?(:sla_notify_email)
     @setting.sla_notify_user_id     = hp[:sla_notify_user_id].presence if hp.key?(:sla_notify_user_id)
-    # KI-Zusammenfassung / Wissensbasis: Werte werden im Modell gegen die
-    # jeweiligen Enum-Listen validiert (AI_SCOPES, AI_PROMPT_MODES, KB_*).
+    # AI summary / knowledge base: values are validated against the respective
+    # enum lists in the model (AI_SCOPES, AI_PROMPT_MODES, KB_*).
     @setting.ai_summary_scope       = hp[:ai_summary_scope]           if hp.key?(:ai_summary_scope)
     @setting.ai_prompt_mode         = hp[:ai_prompt_mode]             if hp.key?(:ai_prompt_mode)
     @setting.ai_prompt              = hp[:ai_prompt].to_s             if hp.key?(:ai_prompt)
@@ -77,7 +77,7 @@ class HelpdeskProjectSettingsApiController < ApplicationController
       @setting.sla_work_days = days.join(',')
     end
 
-    # Aktivierungszeitpunkt merken: SLA gilt nur fuer Tickets ab diesem Datum.
+    # Remember the activation time: SLA applies only to tickets from this date.
     @setting.sla_enabled_at = Time.current if @setting.sla_enabled? && !was_enabled
 
     return unless apply_info_request_settings(hp)
@@ -187,8 +187,8 @@ class HelpdeskProjectSettingsApiController < ApplicationController
     false
   end
 
-  # Prioritaets-Overrides (Array von {priority_id, reaction_minutes, solution_minutes}):
-  # beide Zeiten leer -> Override loeschen, sonst anlegen/aktualisieren.
+  # Priority overrides (array of {priority_id, reaction_minutes, solution_minutes}):
+  # both times empty -> delete the override, otherwise create/update it.
   def update_sla_priorities
     Array(params[:sla_priorities]).each do |row|
       pid = row[:priority_id].to_i

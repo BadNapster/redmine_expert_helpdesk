@@ -1,15 +1,15 @@
-# Microsoft-Graph-Client fuer den Helpdesk-Mailabruf und -Versand.
+# Microsoft Graph client for the helpdesk mail fetch and send.
 #
-# Verwendet den OAuth2 Client-Credentials-Flow (App-Only) gegen Azure AD / Entra ID.
-# Die Zugangsdaten (Tenant-ID, Client-ID, Client-Secret) werden zentral in den
-# Plugin-Einstellungen gepflegt. Das Access-Token wird im Rails-Cache
-# zwischengespeichert (Redis in Produktion).
+# Uses the OAuth2 client-credentials flow (app-only) against Azure AD / Entra ID.
+# The credentials (tenant ID, client ID, client secret) are maintained centrally in
+# the plugin settings. The access token is cached in the Rails cache
+# (Redis in production).
 #
-# Benoetigte Application-Permissions der App-Registrierung:
-#   - Mail.ReadWrite (Mails lesen und in Unterordner verschieben)
-#   - Mail.Send      (Antworten und Autoresponder versenden)
-# Der Zugriff sollte per ApplicationAccessPolicy auf die Helpdesk-Postfaecher
-# eingeschraenkt werden (siehe README).
+# Required application permissions of the app registration:
+#   - Mail.ReadWrite (read mails and move them into subfolders)
+#   - Mail.Send      (send replies and autoresponders)
+# Access should be restricted to the helpdesk mailboxes via an
+# ApplicationAccessPolicy (see README).
 
 require 'net/http'
 require 'uri'
@@ -36,8 +36,8 @@ module RedmineExpertHelpdesk
       %w[tenant_id client_id client_secret].all? { |k| @settings[k].present? }
     end
 
-    # Liefert die Nachrichten eines Ordners (aelteste zuerst), maximal +top+ Stueck.
-    # +folder+ ist der Anzeigename des Ordners (z. B. "Inbox" oder "Posteingang").
+    # Returns the messages of a folder (oldest first), at most +top+ messages.
+    # +folder+ is the display name of the folder (e.g. "Inbox" or "Posteingang").
     def list_messages(mailbox, folder, top = 25)
       folder_id = resolve_folder_id(mailbox, folder)
       query = URI.encode_www_form(
@@ -50,25 +50,25 @@ module RedmineExpertHelpdesk
       response['value'] || []
     end
 
-    # Laedt die komplette Nachricht als MIME (RFC 2822) – Eingabe fuer den Redmine MailHandler.
+    # Loads the complete message as MIME (RFC 2822) – input for the Redmine MailHandler.
     def message_mime(mailbox, message_id)
       get_raw("/users/#{escape(mailbox)}/messages/#{message_id}/$value")
     end
 
-    # Verschiebt eine Nachricht in einen anderen Ordner (z. B. "Verarbeitet").
+    # Moves a message into another folder (e.g. "Verarbeitet").
     def move_message(mailbox, message_id, destination_folder)
       folder_id = resolve_folder_id(mailbox, destination_folder)
       post("/users/#{escape(mailbox)}/messages/#{message_id}/move",
            { 'destinationId' => folder_id })
     end
 
-    # Markiert eine Nachricht als gelesen.
+    # Marks a message as read.
     def mark_as_read(mailbox, message_id)
       patch("/users/#{escape(mailbox)}/messages/#{message_id}", { 'isRead' => true })
     end
 
-    # Listet alle Ordnernamen des Postfachs (Top-Level + direkte Unterordner von Inbox).
-    # Liefert ein sortiertes Array von Anzeigenamen.
+    # Lists all folder names of the mailbox (top level + direct subfolders of Inbox).
+    # Returns a sorted array of display names.
     def list_folders(mailbox)
       query = URI.encode_www_form('$select' => 'id,displayName', '$top' => 100)
       top_level = (get("/users/#{escape(mailbox)}/mailFolders?#{query}")['value'] || [])
@@ -84,35 +84,35 @@ module RedmineExpertHelpdesk
       (top_level + inbox_children).uniq.sort
     end
 
-    # Erstellt einen neuen Top-Level-Ordner im Postfach.
+    # Creates a new top-level folder in the mailbox.
     def create_folder(mailbox, folder_name)
       post("/users/#{escape(mailbox)}/mailFolders", { 'displayName' => folder_name })
     end
 
-    # Sucht einen Ordner und legt ihn an, falls er noch nicht existiert.
-    # Gibt die Ordner-ID zurueck.
+    # Looks up a folder and creates it if it does not exist yet.
+    # Returns the folder ID.
     def find_or_create_folder(mailbox, folder_name)
       return nil if folder_name.blank?
       resolve_folder_id(mailbox, folder_name)
     rescue GraphError
       result = create_folder(mailbox, folder_name)
-      # Cache leeren, damit resolve_folder_id beim naechsten Aufruf den echten Eintrag laedt
+      # Clear the cache so resolve_folder_id loads the real entry on the next call
       cache_key = "redmine_expert_helpdesk/folder/#{mailbox}/#{folder_name}"
       Rails.cache.delete(cache_key)
       result['id']
     end
 
-    # Versendet eine Mail im Namen des Postfachs (landet in "Gesendete Elemente").
-    # +message+ entspricht der Graph-Message-Struktur (subject, body, toRecipients, ...).
+    # Sends a mail on behalf of the mailbox (it lands in "Gesendete Elemente").
+    # +message+ corresponds to the Graph message structure (subject, body, toRecipients, ...).
     def send_mail(mailbox, message, save_to_sent_items = true)
       post("/users/#{escape(mailbox)}/sendMail",
            { 'message' => message, 'saveToSentItems' => save_to_sent_items })
     end
 
-    # Versendet eine Mail als rohe RFC-2822-MIME-Nachricht ueber den Graph-MIME-Endpunkt.
-    # Dabei wird Content-Type: text/plain + Base64-kodierter MIME-Body verwendet.
-    # Dieser Weg ist zuverlaessiger fuer Inline-Bilder (CID), weil Exchange das HTML
-    # bei JSON-Requests umschreibt und dabei cid:-Referenzen entkoppeln kann.
+    # Sends a mail as a raw RFC 2822 MIME message via the Graph MIME endpoint.
+    # This uses Content-Type: text/plain plus a Base64-encoded MIME body.
+    # This route is more reliable for inline images (CID), because Exchange rewrites
+    # the HTML in JSON requests and in doing so can decouple cid: references.
     def send_mail_mime(mailbox, mime_string)
       encoded = Base64.strict_encode64(mime_string)
       uri  = URI("#{GRAPH_BASE}/users/#{escape(mailbox)}/sendMail")
@@ -126,15 +126,15 @@ module RedmineExpertHelpdesk
       req.body = encoded
       response = http.request(req)
       unless response.is_a?(Net::HTTPSuccess)
-        raise GraphError.new("MIME-Mail-Versand fehlgeschlagen (#{response.code}): POST /sendMail" \
+        raise GraphError.new("MIME mail send failed (#{response.code}): POST /sendMail" \
                              "#{graph_error_detail(response.body)}",
                              response.code.to_i, response.body)
       end
       response
     end
 
-    # Ermittelt die Ordner-ID anhand des Anzeigenamens. Bekannte Standardordner
-    # ("inbox" etc.) werden direkt als Well-Known-Name verwendet.
+    # Determines the folder ID from the display name. Well-known standard folders
+    # ("inbox" etc.) are used directly as a well-known name.
     def resolve_folder_id(mailbox, folder)
       return 'inbox' if folder.blank? || folder.casecmp('inbox').zero? || folder.casecmp('posteingang').zero?
 
@@ -148,7 +148,7 @@ module RedmineExpertHelpdesk
       )
       response = get("/users/#{escape(mailbox)}/mailFolders?#{query}")
       entry = (response['value'] || []).first
-      raise GraphError.new("Ordner '#{folder}' im Postfach #{mailbox} nicht gefunden") unless entry
+      raise GraphError.new("Folder '#{folder}' not found in mailbox #{mailbox}") unless entry
 
       Rails.cache.write(cache_key, entry['id'], :expires_in => 12.hours)
       entry['id']
@@ -161,7 +161,7 @@ module RedmineExpertHelpdesk
       cached = Rails.cache.read(cache_key)
       return cached if cached
 
-      raise ConfigurationError.new('Helpdesk: Tenant-ID, Client-ID oder Client-Secret nicht konfiguriert') unless configured?
+      raise ConfigurationError.new('Helpdesk: tenant ID, client ID or client secret not configured') unless configured?
 
       uri = URI("https://login.microsoftonline.com/#{@settings['tenant_id']}/oauth2/v2.0/token")
       response = Net::HTTP.post_form(uri,
@@ -172,11 +172,11 @@ module RedmineExpertHelpdesk
 
       body = JSON.parse(response.body) rescue {}
       unless response.is_a?(Net::HTTPSuccess) && body['access_token']
-        raise GraphError.new("Token-Abruf fehlgeschlagen: #{body['error_description'] || response.code}",
+        raise GraphError.new("Token fetch failed: #{body['error_description'] || response.code}",
                              response.code.to_i, response.body)
       end
 
-      # Token etwas frueher verfallen lassen als von Azure angegeben
+      # Let the token expire a little earlier than specified by Azure
       ttl = [body['expires_in'].to_i - 120, 60].max
       Rails.cache.write(cache_key, body['access_token'], :expires_in => ttl.seconds)
       body['access_token']
@@ -237,7 +237,7 @@ module RedmineExpertHelpdesk
 
       response = http.request(req)
       unless response.is_a?(Net::HTTPSuccess)
-        raise GraphError.new("Graph-Anfrage fehlgeschlagen (#{response.code}): #{method.to_s.upcase} #{path}" \
+        raise GraphError.new("Graph request failed (#{response.code}): #{method.to_s.upcase} #{path}" \
                              "#{graph_error_detail(response.body)}",
                              response.code.to_i, response.body)
       end

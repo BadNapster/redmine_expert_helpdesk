@@ -1,7 +1,7 @@
-# REST-API fuer Helpdesk-Kontakte (Kunden). JSON/XML via .api.rsb.
-# Auth: X-Redmine-API-Key (nur bei aktivem REST-Webservice); Autorisierung ueber
-# die bestehenden Berechtigungen (Lesen: view_helpdesk_info, Schreiben:
-# manage_helpdesk_contacts). Kontakte sind projektbezogen.
+# REST API for helpdesk contacts (customers). JSON/XML via .api.rsb.
+# Auth: X-Redmine-API-Key (only with the REST web service enabled); authorization
+# via the existing permissions (read: view_helpdesk_info, write:
+# manage_helpdesk_contacts). Contacts are project-scoped.
 class HelpdeskContactsApiController < ApplicationController
   before_action :find_project_by_project_id, :only => [:index, :create]
   before_action :find_contact,               :only => [:show, :update, :destroy]
@@ -56,7 +56,7 @@ class HelpdeskContactsApiController < ApplicationController
 
   private
 
-  # Kontakt global per ID; Projektkontext kommt vom Kontakt selbst.
+  # Contact globally by ID; the project context comes from the contact itself.
   def find_contact
     @contact = HelpdeskContact.find(params[:id])
     @project = @contact.project
@@ -72,7 +72,7 @@ class HelpdeskContactsApiController < ApplicationController
     deny_access unless User.current.allowed_to?(:manage_helpdesk_contacts, @project)
   end
 
-  # Ohne Projekt (globaler Kontakt) genuegt Admin-Recht zum Lesen.
+  # Without a project (global contact) admin rights suffice for reading.
   def read_allowed?
     return User.current.admin? if @project.nil?
 

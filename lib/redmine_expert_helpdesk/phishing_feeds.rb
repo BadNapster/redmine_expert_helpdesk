@@ -1,14 +1,14 @@
-# Orchestriert die Phishing-Feed-Synchronisation (PhishTank + Phishing.Database):
-# - run_if_stale: automatischer Sync beim Mailabruf (fetch_all), pro Quelle
-#   nur wenn das Intervall abgelaufen ist; Rails.cache-Lock gegen Doppellaeufe
-# - run_all: manueller Sync (Button in den Plugin-Einstellungen, Rake-Task)
+# Orchestrates the phishing feed synchronization (PhishTank + Phishing.Database):
+# - run_if_stale: automatic sync on mail fetch (fetch_all), per source
+#   only when the interval has elapsed; Rails.cache lock against double runs
+# - run_all: manual sync (button in the plugin settings, rake task)
 module RedmineExpertHelpdesk
   class PhishingFeeds
     LOCK_KEY = 'redmine_expert_helpdesk/phishing_feeds_sync_lock'.freeze
 
-    # Liefert die aktivierten Feeds als [[source, sync_objekt], ...].
-    # PhishTank ist immer dabei (Master-Schalter phishtank_enabled ist
-    # Voraussetzung fuer die gesamte Phishing-Funktion).
+    # Returns the enabled feeds as [[source, sync_object], ...].
+    # PhishTank is always included (the master switch phishtank_enabled is
+    # a prerequisite for the whole phishing feature).
     def self.enabled_feeds(settings)
       feeds = [
         [PhishtankSync::SOURCE, PhishtankSync.new(settings['phishtank_app_key'], settings['phishtank_feed_url'])]
@@ -19,8 +19,8 @@ module RedmineExpertHelpdesk
       feeds
     end
 
-    # Manueller Sync aller aktivierten Feeds.
-    # Liefert [results, errors]: { source => anzahl } / { source => fehlermeldung }.
+    # Manual sync of all enabled feeds.
+    # Returns [results, errors]: { source => count } / { source => error message }.
     def self.run_all
       settings = Setting.plugin_redmine_expert_helpdesk
       results = {}
@@ -38,8 +38,8 @@ module RedmineExpertHelpdesk
       [results, errors]
     end
 
-    # Automatischer Sync: nur faellige Quellen, mit Lock gegen parallele Downloads.
-    # Liefert true wenn mindestens ein Sync gelaufen ist.
+    # Automatic sync: only due sources, with a lock against parallel downloads.
+    # Returns true when at least one sync ran.
     def self.run_if_stale
       settings = Setting.plugin_redmine_expert_helpdesk
       return false unless settings['phishtank_enabled'] == '1'
@@ -57,7 +57,7 @@ module RedmineExpertHelpdesk
           begin
             sync.run
           rescue StandardError => e
-            Rails.logger.error "Helpdesk: Feed-Sync '#{source}' fehlgeschlagen: #{e.message}"
+            Rails.logger.error "Helpdesk: Feed sync '#{source}' failed: #{e.message}"
           end
         end
         true

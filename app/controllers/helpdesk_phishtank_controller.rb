@@ -1,4 +1,4 @@
-# Manueller Phishing-Feed-Sync aus den Plugin-Einstellungen (nur Administratoren).
+# Manual phishing feed sync from the plugin settings (administrators only).
 class HelpdeskPhishtankController < ApplicationController
   before_action :require_admin
 
