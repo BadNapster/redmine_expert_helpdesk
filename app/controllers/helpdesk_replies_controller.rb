@@ -55,7 +55,11 @@ class HelpdeskRepliesController < ApplicationController
     sent_filenames = []
     valid_att_ids  = attachment_ids.any? ? (attachment_ids & @issue.attachments.pluck(:id)) : []
 
-    # Pending attachments (inserted images, not yet saved) by token
+    # Pending attachments by token: everything the agent uploaded through the
+    # standard attachment field (or pasted into the note) while editing, not
+    # yet attached to the ticket - the issue form only saves them on submit,
+    # which happens after the mail is sent. Resolved here so they go out with
+    # the reply. Author check: the uploader is the only one who may send it.
     inline_tokens = Array(params[:inline_attachment_tokens]).map(&:to_s).reject(&:blank?).first(20)
     inline_atts   = inline_tokens.filter_map { |tok| Attachment.find_by_token(tok) }
                                  .select { |a| a.author_id == User.current.id }
@@ -68,8 +72,13 @@ class HelpdeskRepliesController < ApplicationController
 
     if mailbox.outgoing_route == 'smtp'
       processed_html, embedded_atts = RedmineExpertHelpdesk::ReplyImages.to_data_uri(body_html, image_atts)
+      # Every pending upload rides along as a file attachment, minus the ones
+      # the body embeds inline - an image referenced by the text is sent once
+      # (as a data URI), not twice.
+      embedded_ids = embedded_atts.map(&:id).reject(&:nil?)
+      regular_ids  = (valid_att_ids + inline_atts.map(&:id)).uniq - embedded_ids
       message_id = send_reply_smtp(mailbox, reply_to, reply_cc, reply_bcc, subject, processed_html,
-                                   valid_att_ids, embedded_atts, sent_filenames)
+                                   regular_ids, embedded_atts, sent_filenames)
     else
       # Raw MIME delivery for reliable CID inline images – both via the Graph
       # API and via the mailbox's own SMTP server. The JSON approach does not
@@ -79,6 +88,9 @@ class HelpdeskRepliesController < ApplicationController
       message_id             = generate_message_id(mailbox.mailbox_address)
       regular_atts           = Attachment.where(:id => valid_att_ids).to_a
       cid_map, html_with_cid = RedmineExpertHelpdesk::ReplyImages.to_cid(body_html, image_atts)
+      # Same rule as the SMTP branch above: pending uploads become regular
+      # parts, inline-embedded images are not attached as files a second time.
+      regular_atts = (regular_atts + inline_atts).uniq { |a| a.id } - cid_map.keys
       mime_msg = build_cid_mime(mailbox.mailbox_address, reply_to, reply_cc, reply_bcc,
                                 subject, html_with_cid, cid_map, regular_atts, message_id)
       RedmineExpertHelpdesk::MailLogger.track(

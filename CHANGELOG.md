@@ -44,6 +44,15 @@
   German markers (`Schritt-fuer-Schritt`, `VORANGESTELLT`, `kein Kopftext`, `Host`,
   `Backslash`) in the now-Russian prompts; they check the actual wording now. Test
   fixtures were not touched.
+- **Standard-form attachments now go out with the reply.** Files the agent
+  attaches through Redmine's regular attachment field while answering are
+  *pending* uploads: saved with a token, but only attached to the ticket when
+  the issue form submits, which happens after the mail was sent. They were
+  treated as inline-image candidates only, so non-image files silently never
+  reached the customer. The reply now attaches every pending upload to the
+  outgoing mail next to the ticket attachments checked in the reply block.
+  Images referenced in the body still ride along inline and are not duplicated
+  as files, and only the uploader's own files are sent.
 
 ## [0.20.4] - 2026-10-06
 
