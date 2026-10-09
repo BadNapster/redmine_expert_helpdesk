@@ -6,6 +6,37 @@
 > `CHANGELOG.de.md`. From here on, every change is recorded in **both** files (EN authoritative —
 > GitHub release notes are generated from this file).
 
+## [Unreleased]
+
+### Added
+
+- **Full Russian localization.** The complete UI is now available in Russian
+  (`config/locales/ru.yml`, 821 keys) alongside the existing German and English
+  locales. All AI prompts are in Russian, so AI-generated answers, knowledge-base
+  extraction, completeness checks and summaries answer in Russian, and the input
+  markers clients see in quoted conversations are Russian too. Stored defaults that
+  users see (follow-up subject/body, autoresponder body) are in Russian as well but
+  remain editable in the settings.
+
+### Changed
+
+- **Code translated from German to English.** Log messages, exceptions and comments
+  in `lib/`, `app/`, views, migrations, assets, rake tasks, the CI workflows, the
+  plugin Gemfile and scripts are now in English.
+- Hardcoded German UI strings moved to i18n keys (added to `ru`, `de` and `en`):
+  the mailbox folder dialog, the Azure setup hints, the sent-attachments badge in
+  the sidebar (now pluralised) and the invalid-API-key error.
+- Functional regexes that match real mail text (quote markers, reply headers,
+  closing lines) and the stored legacy prompts (`LEGACY_DEFAULT_PROMPTS`) stay
+  unchanged on purpose — see `docs/localization.md` for the full list.
+
+### Fixed
+
+- **Tests updated to the Russian prompt wording.** Five assertions still looked for
+  German markers (`Schritt-fuer-Schritt`, `VORANGESTELLT`, `kein Kopftext`, `Host`,
+  `Backslash`) in the now-Russian prompts; they check the actual wording now. Test
+  fixtures were not touched.
+
 ## [0.20.4] - 2026-10-06
 
 ### Added
