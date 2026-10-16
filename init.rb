@@ -88,7 +88,7 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
   name 'Redmine expert Helpdesk'
   author 'Dennis Buehring'
   description 'Helpdesk plugin: email-to-ticket via Microsoft Graph or IMAP/SMTP, autoresponder, customer replies, SLA, and rules engine'
-  version '0.21.0'
+  version '0.20.4'
   requires_redmine :version_or_higher => '5.0'
   url 'https://github.com/expertZentrale/redmine_expert_helpdesk'
 
@@ -149,7 +149,6 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
              'ai_min_input_chars'   => '200',
              'ai_log_level'         => RedmineExpertHelpdesk::AiLogger::DEFAULT_LEVEL,
              'ai_max_output_tokens' => '500',
-             'ai_summary_disable_thinking' => '0',
              'ai_timeout'           => '60',
              # Kundengerichteter Antwortentwurf (Knopf in der Notiz-Werkzeugleiste).
              # Eigenes Zeitbudget, weil dieser Aufruf - anders als alle anderen -
