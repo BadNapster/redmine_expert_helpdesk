@@ -62,6 +62,7 @@ Under *Administration → Plugins → Redmine expert Helpdesk*, or via the *expe
 | API key (mail fetch) | Secures the global @helpdesk/fetch_all@ endpoint |
 | API key (SLA check) | Secures the @helpdesk/sla_check@ endpoint |
 | Maintenance mode | Pauses every mail fetch and lists the fetches still running, for upgrades and scaling down (see step 6) |
+| Experimental | *Match replies only within the mailbox's project* (a mail continues only tickets of the receiving mailbox's project) and *Enable hand-over to other projects* (a ticket is created in the other project instead of mailing its helpdesk address; each project also has to enable *Take part in hand-overs* in its Helpdesk settings). Both off by default. Relating the tickets across projects needs Redmine's *Allow cross-project issue relations* |
 | Entries per page | Page size of the customer list (default 25) |
 | Max. tickets in customer profile | Tickets shown in the customer detail view (default 10) |
 | Mark tickets awaiting a response | Flags tickets whose customer replied by mail and clears the flag when an agent answers (on by default) |
