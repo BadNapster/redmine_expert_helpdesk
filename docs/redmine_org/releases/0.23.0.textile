@@ -1,0 +1,12 @@
+h3. Added
+
+* *REST API for the knowledge base.* Everything the *Knowledge base* tab does is available over REST (JSON and XML): list entries with status, text and ticket filters, show, create, correct, approve, reject and delete them, and start the background *Rebuild index* and *Re-extract entries* jobs. The same permissions as the tab apply (@view_helpdesk_kb@, @edit_helpdesk_kb@, @manage_helpdesk_kb@). Every change reports whether the vector store took it, so an approved entry that could not be embedded does not go unnoticed. See "API.md":https://github.com/expertZentrale/redmine_expert_helpdesk/blob/main/API.md#knowledge-base.
+
+h3. Fixed
+
+* *Overlapping changes to a knowledge base entry no longer undo each other.* A reject or delete while another request was still embedding the entry - from the tab, the ticket sidebar, the index rebuild or the API - could leave the entry searchable or an orphan vector behind, and a late reject could remove a newer approval's vector. Changes to one entry are now applied one after the other and always follow the entry as it is stored.
+* *Approve in the ticket sidebar* says so when the entry could not be embedded, instead of always reporting success.
+
+h3. Upgrade notes
+
+No migrations. The REST API needs *Administration → Settings → API → Enable REST web service*, like the rest of the plugin's API.

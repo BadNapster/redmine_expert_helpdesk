@@ -121,7 +121,7 @@ While it is on, @fetch_all@ answers @{"maintenance": true}@ without touching a m
 
 h3. REST API
 
-The plugin's own REST API (contacts, tickets, project settings, mailboxes) is separate from the two cron endpoints above and uses Redmine's normal API authentication. Enable *Administration → Settings → API → Enable REST web service*; requests then authenticate with an @X-Redmine-API-Key@ header and are authorized by the same permissions as the UI. Mailbox endpoints require @manage_helpdesk@ for reading as well as writing, because the configuration exposes mail hosts, usernames and OAuth client ids. Full reference: "API.md":https://github.com/expertZentrale/redmine_expert_helpdesk/blob/main/API.md
+The plugin's own REST API (contacts, tickets, project settings, mailboxes, knowledge base) is separate from the two cron endpoints above and uses Redmine's normal API authentication. Enable *Administration → Settings → API → Enable REST web service*; requests then authenticate with an @X-Redmine-API-Key@ header and are authorized by the same permissions as the UI. Mailbox endpoints require @manage_helpdesk@ for reading as well as writing, because the configuration exposes mail hosts, usernames and OAuth client ids. Knowledge base endpoints use the same @view/edit/manage_helpdesk_kb@ permissions as the *Knowledge base* tab. Full reference: "API.md":https://github.com/expertZentrale/redmine_expert_helpdesk/blob/main/API.md
 
 h3. Upgrading
 
