@@ -6,6 +6,27 @@
 > `CHANGELOG.de.md`. From here on, every change is recorded in **both** files (EN authoritative —
 > GitHub release notes are generated from this file).
 
+## [Unreleased]
+
+### Added
+
+- **REST API for the knowledge base.** Everything the *Knowledge base* tab does is now available
+  under `/projects/:id/helpdesk/kb_entries` and `/helpdesk/kb_entries/:id` (JSON and XML): list
+  with status/text/ticket filters, show, create, update, approve, reject, delete, and the
+  background *reindex* and *reextract* jobs. Same permissions as the tab
+  (`view/edit/manage_helpdesk_kb`). Each write reports whether the vector store took the change
+  (`vector_sync`), since an approved entry that failed to embed is otherwise not searchable
+  without anyone noticing. See `API.md`.
+
+### Fixed
+
+- **Overlapping changes to a knowledge base entry** (tab, ticket sidebar, index rebuild and now the REST
+  API) could undo each other: a reject or delete during another request's embedding call left the entry
+  searchable or an orphan vector behind, and a late reject could remove a newer approval's vector. Sync
+  and delete now run one after the other per entry and follow the entry as it is stored.
+- **Approve in the ticket sidebar** now says so when the entry could not be embedded, instead of always
+  reporting success.
+
 ## [0.22.0] - 2026-10-18
 
 ### Documentation

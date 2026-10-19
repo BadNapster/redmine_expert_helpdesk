@@ -119,4 +119,129 @@ class HelpdeskKnowledgeCurationTest < ActiveSupport::TestCase
     assert_not foreign.valid?
     assert foreign.errors[:issue_id].any?
   end
+  # --- sync_vector! against a write that overlaps its embedding call ----------
+
+  # Runs `during` once, the moment the first upsert reaches the store, i.e. after
+  # the embedding call and before the post-upsert check.
+  def while_embedding(&during)
+    RedmineExpertHelpdesk::AiFeatures.stubs(:kb_ready?).returns(true)
+    fired = false
+    @store.stubs(:upsert).with do |*_args|
+      unless fired
+        fired = true
+        during.call
+      end
+      true
+    end
+  end
+
+  def test_sync_vector_rejected_during_embedding_is_removed_again
+    entry = curated_entry('approved')
+    while_embedding { HelpdeskKnowledgeEntry.where(:id => entry.id).update_all(:status => 'rejected') }
+    @store.expects(:delete).with(entry.project_id, entry.id).once
+
+    assert_equal :removed, entry.sync_vector!
+    assert_equal 'rejected', entry.status, 'reloaded: the result describes the stored row'
+    assert_nil entry.point_id
+  end
+
+  def test_sync_vector_edited_during_embedding_reembeds_the_newer_text
+    RedmineExpertHelpdesk::AiFeatures.stubs(:kb_ready?).returns(true)
+    entry = curated_entry('approved')
+    payloads = []
+    @store.stubs(:upsert).with do |*args|
+      HelpdeskKnowledgeEntry.where(:id => entry.id).update_all(:problem => 'neuer') if payloads.empty?
+      payloads << args.last['problem']
+      true
+    end
+
+    assert_equal :indexed, entry.sync_vector!
+    assert_equal %w[korrigiert neuer], payloads
+    assert_equal 'neuer', entry.problem
+  end
+
+  def test_sync_vector_deleted_during_embedding_removes_the_point
+    entry = curated_entry('approved')
+    while_embedding { HelpdeskKnowledgeEntry.where(:id => entry.id).delete_all }
+    @store.expects(:delete).with(entry.project_id, entry.id).once
+
+    assert_equal :removed, entry.sync_vector!
+  end
+
+  def test_sync_vector_reports_failed_unindex_after_overlapping_reject
+    entry = curated_entry('approved')
+    while_embedding { HelpdeskKnowledgeEntry.where(:id => entry.id).update_all(:status => 'rejected') }
+    @store.stubs(:delete).raises(StandardError, 'store down')
+
+    assert_equal :unindex_failed, entry.sync_vector!
+  end
+  # --- Overlapping requests: the last sync acts on the last write -------------
+
+  # An older rejection whose sync runs after a newer approval finished must not
+  # delete the newer vector: it acts on the row as it is now (approved).
+  def test_late_sync_of_an_older_rejection_keeps_the_newer_approval
+    RedmineExpertHelpdesk::AiFeatures.stubs(:kb_ready?).returns(true)
+    entry = curated_entry('rejected') # this request's copy
+    HelpdeskKnowledgeEntry.where(:id => entry.id).update_all(:status => 'approved', :point_id => entry.id.to_s)
+    @store.expects(:delete).never
+    @store.expects(:upsert).once
+
+    assert_equal :indexed, entry.sync_vector!
+    assert_equal 'approved', entry.status
+  end
+
+  # An approval whose sync runs after a delete finished must not re-embed the
+  # entry: the delete removed the point before the row, nothing would remove it.
+  def test_late_sync_after_a_delete_does_not_reembed
+    RedmineExpertHelpdesk::AiFeatures.stubs(:kb_ready?).returns(true)
+    entry = curated_entry('approved')
+    HelpdeskKnowledgeEntry.where(:id => entry.id).delete_all
+    @store.expects(:upsert).never
+
+    assert_equal :removed, entry.sync_vector!
+  end
+
+  def test_destroy_with_vector_removes_point_then_row
+    entry = curated_entry('approved')
+    entry.update_columns(:point_id => entry.id.to_s)
+    @store.expects(:delete).with(entry.project_id, entry.id).once
+
+    assert entry.destroy_with_vector!
+    assert_not HelpdeskKnowledgeEntry.exists?(entry.id)
+  end
+
+  def test_destroy_with_vector_keeps_row_when_point_removal_fails
+    entry = curated_entry('approved')
+    entry.update_columns(:point_id => entry.id.to_s)
+    @store.stubs(:delete).raises(StandardError, 'store down')
+
+    assert_not entry.destroy_with_vector!
+    assert HelpdeskKnowledgeEntry.exists?(entry.id)
+  end
+
+  # What serializes the two: both take the row lock before touching the store.
+  def test_sync_and_destroy_take_the_row_lock
+    skip 'adapter has no row locks' unless HelpdeskKnowledgeEntry.connection.adapter_name =~ /mysql|postg/i
+
+    RedmineExpertHelpdesk::AiFeatures.stubs(:kb_ready?).returns(true)
+    entry = curated_entry('approved')
+    sql = []
+    callback = ->(*, payload) { sql << payload[:sql] }
+    ActiveSupport::Notifications.subscribed(callback, 'sql.active_record') do
+      entry.sync_vector!
+      entry.destroy_with_vector!
+    end
+    locks = sql.grep(/helpdesk_knowledge_entries.*FOR UPDATE/m)
+    assert_equal 2, locks.size, sql.join("\n")
+  end
+  # The rebuild embeds outside any request; a delete during its embedding call
+  # must not leave an orphan point behind.
+  def test_reindex_removes_point_of_an_entry_deleted_during_embedding
+    RedmineExpertHelpdesk::AiFeatures.stubs(:kb_ready?).returns(true)
+    entry = HelpdeskKnowledgeEntry.create!(:project_id => 1, :issue_id => 1, :problem => 'a', :status => 'approved')
+    while_embedding { HelpdeskKnowledgeEntry.where(:id => entry.id).delete_all }
+    @store.expects(:delete).with(1, entry.id).once
+
+    assert_equal 0, HelpdeskKnowledgeReindexJob.rebuild(1)
+  end
 end

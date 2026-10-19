@@ -54,6 +54,39 @@ class HelpdeskKnowledgeEntry < HelpdeskApplicationRecord
     update(attrs.merge(:updated_by_id => user&.id, :curated_at => Time.current))
   end
 
+  # Brings the vector store in line with the row after a person changed it:
+  # approved -> (re-)embed, any other status -> must not be searchable. Synchronous,
+  # so the caller (tab or REST API) can report at once whether the store took it.
+  # Returns one of SYNC_RESULTS.
+  #
+  # Runs under the row lock and acts on the row as it is then, not on this
+  # request's copy: two overlapping requests (an approve and a reject, or an edit
+  # and a delete) otherwise finish their store calls in either order, and the
+  # slower one undoes the faster one - a stale upsert brings back rejected text, a
+  # late delete drops a newer approved vector. Serialized, the last sync always
+  # sees the last write. The lock is held across the embedding call, so another
+  # write to the same entry waits for it. index_fenced still guards against the
+  # ingest job, which embeds without the lock.
+  SYNC_RESULTS = %i[indexed not_configured problem_blank index_failed removed unindex_failed].freeze
+
+  def sync_vector!
+    self.class.transaction { lock_current ? sync_locked : :removed }
+  end
+
+  # Delete with the point removed first, under the same lock as sync_vector!, so
+  # no approval can re-embed the entry between the two steps. Once the row is
+  # gone nothing records which point to remove, so a failed removal keeps the row
+  # and returns false.
+  def destroy_with_vector!
+    self.class.transaction do
+      next true unless lock_current
+      next false if point_id.present? && !self.class.unindex(self)
+
+      destroy
+      true
+    end
+  end
+
   # Removes the entry's point from the vector store. Returns false (and logs) on
   # failure instead of raising: the SQL row is the system of record, and a stale
   # point is cleared by the next project reindex.
@@ -70,6 +103,35 @@ class HelpdeskKnowledgeEntry < HelpdeskApplicationRecord
   end
 
   private
+
+  # Takes the row lock and reloads; false when the row is gone (a delete removed
+  # its point before the row).
+  def lock_current
+    lock!
+    true
+  rescue ActiveRecord::RecordNotFound
+    false
+  end
+
+  def sync_locked
+    if approved?
+      if !RedmineExpertHelpdesk::AiFeatures.kb_ready?
+        :not_configured
+      elsif problem.blank?
+        :problem_blank
+      else
+        result = HelpdeskKnowledgeIngestJob.index_fenced(self)
+        reload if self.class.exists?(id)
+        result
+      end
+    elsif point_id.present? && !self.class.unindex(self)
+      # point_id stays set, so the entry still shows as indexed and the next
+      # "Rebuild index" removes the point.
+      :unindex_failed
+    else
+      :removed
+    end
+  end
 
   # Entries are strictly per project; a manual entry must not reference a ticket
   # of another project (its text would leak into this project's retrieval).

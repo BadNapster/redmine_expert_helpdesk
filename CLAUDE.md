@@ -416,6 +416,17 @@ nested registration would never fire in production.
   entry unless `force`**, otherwise a re-close would replace a correction with the model's original
   mistake. `HelpdeskKnowledgeReindexJob.rebuild(pid)` is the one per-project rebuild (tab and
   `kb_reembed`). `AiFeatures.kb_ready?` gates every write to the store.
+  **REST API** (`HelpdeskKbEntriesApiController`, `/projects/:id/helpdesk/kb_entries`, member routes
+  global by id) maps to the same three permissions in init.rb and shares the post-write logic via
+  `HelpdeskKnowledgeEntry#sync_vector!`, whose result symbol the tab turns into a flash and the API
+  returns as `vector_sync` — add a new outcome there, not in either controller.
+  It runs under the entry's **row lock** and acts on the re-read row, not the request's copy, and
+  `destroy_with_vector!` unindexes + destroys under the same lock: overlapping approve/reject/edit/
+  delete requests otherwise finish their store calls in either order and the slower undoes the
+  faster (stale upsert of rejected text, late delete of a newer vector). The lock is held across the
+  embedding call. `index_fenced` (index + `fence_index`) still covers the ingest job, which embeds
+  without the lock. **Every person-triggered or rebuild write to the store goes through `sync_vector!`**
+  (tab, API, sidebar approve, `HelpdeskKnowledgeReindexJob`) — never call `index_entry` directly there.
   **Detail levels** (`KnowledgeExtractor::DETAIL_LEVELS` = general/specific/most_specific, migration
   065): `prompt_for(level)` builds the built-in prompt; `general` keeps the old generalising
   wording, plus the privacy instruction every level (and, via `with_privacy`, every own prompt) gets. init.rb used to seed the then-current default into `kb_extract_prompt`, so
