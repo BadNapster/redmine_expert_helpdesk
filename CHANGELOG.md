@@ -20,6 +20,11 @@
 
 ### Changed
 
+- **Integrated the main branch up to 0.23.0.** Thinking mode for AI summaries,
+  project-scoped mail matching (experimental), hand-over to another project
+  (experimental) and the knowledge-base REST API are now part of develop; all
+  their new UI strings are translated to Russian in `ru.yml`. See the
+  0.21.0–0.23.0 sections below for details.
 - **Code translated from German to English.** Log messages, exceptions and comments
   in `lib/`, `app/`, views, migrations, assets, rake tasks, the CI workflows, the
   plugin Gemfile and scripts are now in English.
