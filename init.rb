@@ -60,6 +60,8 @@ require File.expand_path('../lib/redmine_expert_helpdesk/reply_images', __FILE__
 require File.expand_path('../lib/redmine_expert_helpdesk/reply_box', __FILE__)
 require File.expand_path('../lib/redmine_expert_helpdesk/note_quoter', __FILE__)
 require File.expand_path('../lib/redmine_expert_helpdesk/maintenance', __FILE__)
+require File.expand_path('../lib/redmine_expert_helpdesk/thread_scope', __FILE__)
+require File.expand_path('../lib/redmine_expert_helpdesk/handover', __FILE__)
 require File.expand_path('../lib/redmine_expert_helpdesk/mail_processor', __FILE__)
 require File.expand_path('../lib/redmine_expert_helpdesk/init_mailer', __FILE__)
 require File.expand_path('../lib/redmine_expert_helpdesk/hooks', __FILE__)
@@ -88,7 +90,7 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
   name 'Redmine Helpdesk'
   author 'Dennis Buehring'
   description 'Helpdesk plugin: email-to-ticket via Microsoft Graph or IMAP/SMTP, autoresponder, customer replies, SLA, and rules engine'
-  version '0.20.4'
+  version '0.23.0'
   requires_redmine :version_or_higher => '5.0'
   url 'https://github.com/BadNapster/redmine_expert_helpdesk.git'
 
@@ -117,7 +119,10 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
              'default_smtp_port'     => '587',
              'default_smtp_security' => 'starttls',
              'awaiting_agent_enabled'   => '1',
+             'thread_scope_enabled'     => '0',
              'inline_images_enabled'    => '1',
+             # Experimental: hand a ticket over to another project instead of mailing it.
+             'handover_enabled'         => '0',
              # Colours of the customer-facing block in the edit form. The constants
              # behind them are the real fallback — see ReplyBox::DEFAULT_BOX_COLOR.
              'reply_box_color'          => RedmineExpertHelpdesk::ReplyBox::DEFAULT_BOX_COLOR,
@@ -149,6 +154,7 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
              'ai_min_input_chars'   => '200',
              'ai_log_level'         => RedmineExpertHelpdesk::AiLogger::DEFAULT_LEVEL,
              'ai_max_output_tokens' => '500',
+             'ai_summary_disable_thinking' => '0',
              'ai_timeout'           => '60',
              # Customer-facing answer draft (button in the note toolbar).
              # Own time budget, because this call - unlike all others - runs
@@ -228,13 +234,16 @@ Redmine::Plugin.register :redmine_expert_helpdesk do
     # Knowledge base tab, three tiers (roles "KB viewer" / "KB editor" / "KB admin"):
     # read entries, correct/approve/reject them (re-embeds), delete + rebuild the index.
     permission :view_helpdesk_kb, {
-      :helpdesk_kb_entries => [:index, :show]
+      :helpdesk_kb_entries     => [:index, :show],
+      :helpdesk_kb_entries_api => [:index, :show]
     }, :read => true
     permission :edit_helpdesk_kb, {
-      :helpdesk_kb_entries => [:new, :create, :edit, :update, :approve, :reject]
+      :helpdesk_kb_entries     => [:new, :create, :edit, :update, :approve, :reject],
+      :helpdesk_kb_entries_api => [:create, :update, :approve, :reject]
     }, :require => :member
     permission :manage_helpdesk_kb, {
-      :helpdesk_kb_entries => [:destroy, :reindex, :reextract]
+      :helpdesk_kb_entries     => [:destroy, :reindex, :reextract],
+      :helpdesk_kb_entries_api => [:destroy, :reindex, :reextract]
     }, :require => :member
   end
 

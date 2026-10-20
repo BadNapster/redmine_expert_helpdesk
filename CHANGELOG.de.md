@@ -5,6 +5,170 @@
 > Die englische `CHANGELOG.md` ist maßgeblich und wird synchron gehalten. Diese deutsche Fassung
 > enthält zusätzlich die vollständige Historie vor dem 2026-07-24 (Einträge, die es nur auf Deutsch gibt).
 
+## [0.23.0] - 2026-10-19
+
+### Hinzugefügt
+
+- **REST-API für die Wissensbasis.** Alles, was der Reiter *Wissensbasis* kann, steht jetzt unter
+  `/projects/:id/helpdesk/kb_entries` und `/helpdesk/kb_entries/:id` bereit (JSON und XML): Liste
+  mit Status-, Text- und Ticketfilter, Anzeigen, Anlegen, Bearbeiten, Freigeben, Ablehnen, Löschen
+  sowie die Hintergrundjobs *reindex* und *reextract*. Dieselben Berechtigungen wie im Reiter
+  (`view/edit/manage_helpdesk_kb`). Jede Änderung meldet, ob der Vektor-Store sie übernommen hat
+  (`vector_sync`) – ein freigegebener Eintrag, dessen Einbettung fehlschlug, wäre sonst unbemerkt
+  nicht auffindbar. Siehe `API.md`.
+
+### Behoben
+
+- **Überlappende Änderungen an einem Wissensbasis-Eintrag** (Reiter, Ticket-Seitenleiste, Index-Neuaufbau
+  und jetzt die REST-API) konnten sich gegenseitig rückgängig machen: Ein Ablehnen oder Löschen während
+  der Einbettung eines anderen Requests ließ den Eintrag durchsuchbar oder einen verwaisten Vektor zurück,
+  ein spätes Ablehnen konnte den Vektor einer neueren Freigabe löschen. Abgleich und Löschen laufen jetzt
+  je Eintrag nacheinander und richten sich nach dem aktuellen Stand des Eintrags.
+- **Freigeben in der Ticket-Seitenleiste** meldet jetzt, wenn der Eintrag nicht eingebettet werden konnte,
+  statt immer Erfolg anzuzeigen.
+
+## [0.22.0] - 2026-10-18
+
+### Dokumentation
+
+- **`EMAIL_FLOW.de.md`** (englisch `EMAIL_FLOW.md`): Diagramme aller Mailabläufe – Abruf, Filter,
+  Antwort oder neues Ticket, was mit dem Ticket passiert, Mails an mehrere Projekte, ausgehende
+  Mails –, jeweils mit den Einstellungen, die den Weg verändern, dazu eine Übersicht all dieser
+  Einstellungen und wo sie gepflegt werden.
+
+### Behoben
+
+- **Anzeigenamen in Anführungszeichen in der Initialmail.** *Neues Helpdesk-Ticket* und *Kontakt
+  zuordnen* trennten die Empfängerfelder an jedem Komma, `"Doe, Jane" <jane@doe.com>` zerfiel also,
+  und die erste An-Adresse war nie gültig. Sie trennen jetzt wie das Antwortformular.
+- **Eine interne Notiz lässt sich speichern, nachdem eine Antwort angehalten wurde.** Schlug das
+  Senden fehl oder hielt das Formular die Antwort wegen einer fehlenden Auswahl an, bewirkte das
+  Abwählen der Mail, um nur die Notiz zu speichern, nichts: Redmines Schutz vor doppeltem Absenden
+  hatte den angehaltenen Versuch mitgezählt.
+- **Kontakt zuordnen prüft, ob der Bearbeiter das Ticket sehen darf.** Das Formular prüfte nur die
+  Projektberechtigung; ein Bearbeiter, der nur eigene Tickets sehen darf, konnte so Beschreibung und
+  Anhänge eines fremden Tickets per Mail verschicken – und mit der Übergabe kopieren –, indem er
+  dessen Nummer absendete.
+- **Eine fehlgeschlagene Initialmail eines neuen Tickets wird gemeldet.** Sie landete nur im Log,
+  und der Bearbeiter hielt sie für zugestellt; die Ticketseite zeigt den Fehler jetzt an.
+- **Die Helpdesk-Felder im Formular für neue Tickets überstehen ein Neuladen.** Ein Trackerwechsel
+  oder ein nicht speicherbares Ticket leerte sie, und der Haken *Als E-Mail an Kunden senden* blieb
+  danach wirkungslos.
+- **Ein Postfach führt nur noch Tickets seines eigenen Projekts fort** – zuschaltbar, experimentell. Redmines `MailHandler`
+  folgt einem `[#id]`-Betrefftag oder einer Redmine-/Helpdesk-Message-ID in
+  `In-Reply-To`/`References` in jedes Projekt, und die Thread-Suche des Plugins durchsuchte ebenfalls
+  alle Projekte. Eine Mail an die Adresse von Projekt B zu einem Ticket aus Projekt A wurde deshalb
+  an das Ticket von A angehängt, statt in B ein Ticket zu werden – und da Mails ohne
+  Berechtigungsprüfung übergeben werden, konnte jeder Absender, der eine Ticketnummer kannte, in
+  dieses Ticket schreiben, auch in privaten Projekten und Projekten ohne Helpdesk-Modul.
+  Thread-Marker auf Tickets anderer Projekte (Unterprojekte eingeschlossen) werden jetzt entfernt,
+  bevor der `MailHandler` die Mail sieht, sodass sie zum Ticket im Projekt des Postfachs wird; Marker
+  des eigenen Projekts bleiben, normale Antworten sind nicht betroffen. Ein Betrefftag auf ein nicht
+  existierendes Ticket wird ebenfalls entfernt – die Mail wurde bisher abgelehnt und landete im
+  Skipped-Ordner. Message-IDs ohne spitze Klammern, verschachtelte Tags wie `[#[#4]4]` und
+  Forum-Antwort-Tags (`[Forum - msg45]`, über die eine Mail in ein Forenthema schreiben konnte) sind
+  ebenfalls abgedeckt. Die am Ticket angehängte `.eml` behält die Header so, wie sie angekommen sind.
+  Ein Betreff mit mehr als 20 Ticketnummern, mehr als fünf Ebenen Verschachtelung oder mehr als 998
+  Zeichen verliert alle Tags (und eckigen Klammern) ohne Nachschlagen, ein präparierter
+  Betreff kann den Abruf also nicht aufhalten; ebenso werden `In-Reply-To`/`References` mit mehr als
+  50 Message-IDs ungeprüft verworfen.
+  Ein Ticket, das über ein Postfach eröffnet und später in ein anderes Projekt verschoben wurde,
+  erhält die Antworten des Kunden weiterhin. **Standardmäßig aus**, weil es ändert, in welchem Ticket
+  eine Mail landet: einschalten unter *Administration → Plugins → Redmine expert Helpdesk →
+  Konfigurieren → Experimentell → Antworten nur im Projekt des Postfachs zuordnen*; solange es aus
+  ist, werden Mails zugeordnet wie bisher.
+- **Dieselbe Mail landet nicht mehr doppelt in einem Projekt.** Eine Mail an zwei Postfächer eines
+  Projekts, oder an zwei Projekte, von denen eines dem Thread des anderen folgte, wurde je Postfach
+  einmal ergänzt. Mit projektbezogener Zuordnung wird eine Message-ID, die das Projekt schon
+  erhalten hat, übersprungen; ein
+  anderes Projekt, das dieselbe Mail erhält, ist kein Duplikat und bekommt sein eigenes Ticket.
+- **Antworten auf Agentenantworten werden wieder per Message-ID gefunden.** Ausgehende Nachrichten
+  speichern ihre Message-ID mit spitzen Klammern, eingehende ohne; die Thread-Suche suchte nur die
+  nackte Form und fand eine Agentenantwort deshalb nie – sie funktionierte nur, solange der Betreff
+  noch das `[#id]`-Tag trug.
+
+### Hinzugefügt
+
+- **Experimentelle Einstellungen, gerahmt.** Die Plugin-Einstellungen erhalten einen Abschnitt
+  *Experimentell* mit gelbem Warnrahmen für die Schalter, die ändern, wie Mails zugeordnet oder
+  zugestellt werden – projektbezogene Zuordnung und Übergabe; der Übergabe-Schalter im Projekt trägt
+  denselben Rahmen.
+- **Übergabe an ein anderes Projekt statt einer Mail (experimentell).** Zentraler Schalter
+  *Übergabe an andere Projekte aktivieren* plus *An Übergaben teilnehmen* je Projekt (Migration 067);
+  beide Projekte müssen teilnehmen. Nennt eine Antwort die Helpdesk-Adresse eines teilnehmenden
+  Projekts, wird diese Adresse aus der Mail genommen und der Bearbeiter gefragt, was übergeben wird –
+  nur die Notiz mit ihren Anhängen oder die komplette Historie (Beschreibung, öffentliche Notizen, alle
+  Anhänge; private Notizen bleiben zurück). Das Ticket wird dort direkt angelegt: mit dem Bearbeiter als
+  Autor, den Standardwerten des Postfachs, dem Kunden als Kontakt, in Beziehung zum Ausgangsticket, und
+  eine Zeile in der Notiz des Ausgangstickets nennt es. Übrige Empfänger werden wie bisher gemailt;
+  schlägt diese Mail fehl, wird die Übergabe zurückgenommen, aber nie, nachdem die Mail
+  raus ist. *Neue Tickets zuweisen an* des Zielprojekts gilt. Ein bewusst geleertes An bleibt leer,
+  eine Übergabe an eine CC-Adresse mailt also niemanden. Bilder des Tickets, die die Notiz zitiert,
+  gehen mit, und Bildverweise im kopierten Text zeigen auf die Kopien. Die Benachrichtigung des
+  Zielteams geht erst raus, wenn die Übergabe endgültig ist. Ein nur per BCC erreichtes Ziel bleibt
+  aus einer öffentlichen Notiz heraus. Der Bearbeiter muss das Ausgangsticket sehen dürfen. Der Kontakt des Kunden im
+  Zielprojekt führt das Ticket sofort, schon bevor eine Mail von ihm dort ankommt. Ein übergebenes
+  Ticket, das in ein drittes Projekt weiterverschoben wird, erhält Antworten über das Postfach, an
+  das es übergeben wurde, weiterhin (Migration 068). Als Ziel werden nur Projekte angeboten, die der
+  Bearbeiter sehen darf – die Adresse jedes anderen Projekts bleibt ein normaler Empfänger, und das
+  Formular erfährt sie nie. Ohne Helpdesk-Standardzuweisung gilt Redmines Projektstandard, sofern
+  zuweisbar. Kontaktverläufe zeigen nur Tickets, die der Betrachter sehen darf. Jedes teilnehmende Projekt erhält ein
+  Ticket, egal wie viele seiner Postfächer genannt sind; eine Antwort, nach der nur BCC-Empfänger übrig
+  blieben, wird abgelehnt, bevor etwas übergeben wird.
+- **Übergabe aus einem neuen Ticket und aus *Kontakt zuordnen* (experimentell).** Die Initialmail
+  (*Neues Helpdesk-Ticket* und *Kontakt zuordnen* an einem Ticket ohne Kontakt) übergibt wie eine
+  Antwort: Die Helpdesk-Adresse eines teilnehmenden Projekts verlässt An/CC/BCC, und das Ticket wird
+  dort direkt angelegt. Zu wählen gibt es nichts – das andere Projekt erhält, was die Mail enthalten
+  hätte: Betreff, Text und alle Anhänge des Tickets. Die erste verbleibende An-Adresse wird Kunde,
+  das Postfach eines anderen Teams wird also nicht mehr Kunde des Tickets. Das Formular zeigt schon
+  beim Tippen, was passieren wird: welche Projekte das Ticket erhalten, wer Kunde wird, und eine
+  Warnung, wenn niemand in An übrig ist. Ein Haken verschiebt dann den ersten CC-Empfänger nach An;
+  ohne ihn wird das Speichern blockiert, weil weder gemailt noch übergeben würde. Stehen in An nur
+  Übergabe-Adressen, gibt es keine Mail und keinen Kunden, und das Formular sagt das. Schlägt die
+  Mail fehl, bleibt die Übergabe bestehen, und der Bearbeiter erfährt beides. Das Ausgangsticket
+  erhält eine Notiz mit den neuen Tickets (privat, wenn ein Ziel nur per BCC erreicht wurde).
+- **Details der Übergabe.** Ein nur per BCC erreichtes Ziel wird nicht mehr mit dem Ausgangsticket
+  verknüpft – die Beziehung zeigte den Lesern des Ausgangstickets, wer das Thema noch erhalten hat.
+  Text aus einem KI-Entwurf geht als eigene, entsprechend markierte Notiz über, mit einem Platzhalter
+  in der Beschreibung, damit Wissensbasis und Antwortvorschläge des Zielprojekts ihn nicht als
+  Eingabe nehmen; seine Bilder zeigen ebenfalls auf die Kopien. Das vorläufige Ticket wird an sich selbst stummgeschaltet statt Mails für den ganzen
+  Prozess abzuschalten (was Mails anderer Anfragen verschlucken konnte), und es kommt erst in die
+  Wissensbasis, wenn die Übergabe endgültig ist. *Letztes Ticket* in der Kundenliste berücksichtigt
+  auch verknüpfte Tickets: Ein Kontakt, der nur eine Übergabe erhalten hat, zeigt deren Datum statt
+  „–“, und die Sortierung folgt demselben Datum. Eine nach einer fehlgeschlagenen Mail
+  zurückgenommene Übergabe wird nur gelöscht, solange niemand daran gearbeitet hat; eine mit
+  Änderung, Notiz oder gebuchter Zeit bleibt, und die Fehlermeldung nennt sie.
+- **Projektübergreifende Verweise für eine Mail an mehrere Projekte** (bei eingeschalteter
+  projektbezogener Zuordnung). Das Ticket wird mit dem
+  Ticket des anderen Projekts in Beziehung gesetzt (*verwandt mit*) – mit dem, auf das die
+  entfernten Marker zeigten, und mit dem, das ein anderes Projekt aus derselben Mail angelegt hat. Einem entfernten Marker wird nur
+  in ein Projekt mit Helpdesk-Modul gefolgt, da jeder eine Ticketnummer in einen Betreff schreiben
+  kann. Die Beziehung wird still angelegt, ohne Historieneintrag und Benachrichtigung.
+  Redmine zeigt eine Beziehung nur Benutzern, die beide Tickets sehen dürfen. Die Ticket-Seitenleiste
+  listet unter *Auch zugestellt an* die anderen Helpdesk-Adressen, an die die Mail ging, und nennt
+  das Projekt nur, wenn der Betrachter es sehen darf. Die Beziehung setzt Redmines
+  *Ticket-Beziehungen zwischen Projekten erlauben* voraus; ohne die Einstellung wird nichts verknüpft.
+
+## [0.21.0] - 2026-10-14
+
+### Hinzugefügt
+
+- **Denkmodus für KI-Zusammenfassungen abschaltbar**, zentral und je Projekt (zentrale Einstellung
+  / aus / erlaubt; Migration 066). Ein Reasoning-Modell hinter dem eigenen Endpunkt steckte
+  gelegentlich seine ganze Ausgabe in `reasoning_content` und lieferte eine leere Antwort, sodass
+  das Ticket keine Zusammenfassung bekam (*Leere Antwort vom KI-Provider*). Abgeschaltet senden
+  Zusammenfassungs-Anfragen `chat_template_kwargs: {"enable_thinking": false}` (vLLM/SGLang,
+  z. B. Qwen3). Nur der eigene Endpunkt sendet das Feld; Anfragen an OpenAI und Anthropic bleiben
+  unverändert. Auch in der Projekteinstellungs-API als `ai_summary_disable_thinking`. Beide
+  Einstellungsseiten warnen, wenn der Denkmodus aus ist, während Wissensbasis-Vorschläge in die
+  Zusammenfassung einfließen: Ohne Denkphase ergänzte das Modell in 9 von 20 Testtickets einen
+  unpassenden oder leeren Lösungsvorschlag (mit Denkmodus: 0).
+- **Zusammenfassungen werden bei leerer Antwort einmal wiederholt.** Mit erlaubtem Denkmodus und
+  eigenem Endpunkt wird eine leere Antwort (`EmptyResponseError`) ohne Denkmodus und ohne
+  Wissensbasis-Block erneut angefragt, weil das Modell diesen ohne Denkphase schlecht beurteilt.
+  Die Notiz weist darauf hin, und die Vorschläge in der Seitenleiste bekommen für diesen Lauf keine
+  Bewertung. Andere Fehler werden nicht wiederholt.
+
 ## [0.20.4] - 2026-10-06
 
 ### Hinzugefügt

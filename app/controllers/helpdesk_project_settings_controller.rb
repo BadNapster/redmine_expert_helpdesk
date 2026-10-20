@@ -59,6 +59,9 @@ class HelpdeskProjectSettingsController < ApplicationController
       params.dig(:helpdesk_project_setting, :phishing_check_enabled) == '1'
     action = params.dig(:helpdesk_project_setting, :phishing_action).to_s
     setting.phishing_action = action if HelpdeskProjectSetting::PHISHING_ACTIONS.include?(action)
+    # Only rendered while the central switch is on - absent means "leave it".
+    hand = params.dig(:helpdesk_project_setting, :handover_enabled)
+    setting.handover_enabled = hand == '1' if !hand.nil? && setting.has_attribute?(:handover_enabled)
   end
 
   # SLA settings (second form in the tab) incl. priority overrides
@@ -99,6 +102,17 @@ class HelpdeskProjectSettingsController < ApplicationController
     setting.ai_min_image_kb    = hp[:ai_min_image_kb].presence&.to_i
     setting.ai_include_journal       = hp[:ai_include_journal] == '1'
     setting.ai_include_private_notes = hp[:ai_include_private_notes] == '1'
+    if setting.has_attribute?(:ai_summary_disable_thinking)
+      setting.ai_summary_disable_thinking = thinking_override(hp[:ai_summary_disable_thinking])
+    end
+  end
+
+  # Three-way select: blank = central setting (NULL), '1' = disable, '0' = allow.
+  def thinking_override(value)
+    case value.to_s
+    when '1' then true
+    when '0' then false
+    end
   end
 
   # AI answer draft (own form in the tab). Shares the prompt modes with the

@@ -25,6 +25,10 @@ Redmine is supplied by a Docker image; the app only exists inside the running co
 - **Every change must update `CHANGELOG.md` (EN, authoritative)** and its German mirror
   **`CHANGELOG.de.md`**; for user-facing changes also **`README.md` (EN) and `README.de.md` (DE)**.
   Keep each EN/DE pair in sync. GitHub release notes are generated from `CHANGELOG.md`.
+- **`EMAIL_FLOW.md` / `EMAIL_FLOW.de.md`** hold the Mermaid diagrams of every mail flow and the
+  settings that steer them. Any change to the incoming pipeline, reply matching, outgoing routes or a
+  setting that affects them must update both (diagram and settings table), using the exact UI labels
+  from `config/locales/{en,de}.yml`.
 - **Language policy:** write **code comments in English** (legacy German comments may remain until
   that code is next touched). **i18n stays bilingual** (`config/locales/en.yml` + `de.yml`) and the
   plugin UI is German.
@@ -160,8 +164,33 @@ that order is what makes `safe_to_stop` trustworthy across pods.
   - `mail_processor.rb` — the heart: per mailbox, hands raw MIME to Redmine's own `MailHandler`
     (which does ticket creation / reply matching via `In-Reply-To`/`[#id]` / attachments /
     user creation), then applies the new-ticket defaults, links contact, autoresponder, phishing
-    check, stores `.eml`, moves the mail. Reply-vs-new matching is delegated entirely to
-    `MailHandler`. `apply_new_issue_defaults` runs for new tickets only: project
+    check, stores `.eml`, moves the mail. Reply-vs-new matching is done by `MailHandler`; with the
+    experimental, opt-in plugin setting `thread_scope_enabled` (`ThreadScope.enabled?`, default off,
+    gated through `MailProcessor#thread_scope?`) only within the mailbox's project:
+    `ThreadScope#scrub` (`thread_scope.rb`) first removes every thread
+    marker (`[#id]` subject tags, Redmine/helpdesk Message-IDs) pointing at another project's ticket,
+    subprojects included, and all ticket lookups after it are project-scoped. `ThreadScope#local?`
+    also counts a ticket opened through one of the project's mailboxes and moved away since
+    (provenance from the creating incoming `HelpdeskMessage`, not `HelpdeskTicketInfo#helpdesk_mailbox`,
+    which `link!` also fills on replies). Removed tickets and
+    other projects' tickets from the same Message-ID are related (`relate_across_projects`);
+    `HelpdeskMessage.received_in_project?` skips a mail the project already has. Message-IDs are
+    stored in both spellings (incoming bare, outgoing `<id>`) — query via
+    `HelpdeskMessage.message_id_variants`. Experimental `handover.rb`: with the central
+    `handover_enabled` and both projects' `HelpdeskProjectSetting#handover_enabled` on, the reply
+    controller takes participating helpdesk addresses out of the mail and creates the ticket there
+    (`note` or `history` mode, chosen by the agent; private notes never go over), before the mail,
+    undone only if the mail fails before delivery, and only while untouched (`Handover.undo`:
+    `lock_version` and journals read inside the creation transaction, no new journals, no time entries; kept ones are
+    finalized and named in the error). Until final the ticket is provisional
+    (`issue.notify = false` — never `Mailer.with_deliveries`, a process-wide flag — and
+    `helpdesk_skip_kb_ingest`); `Handover.finalize` notifies and enqueues the KB ingest. Bcc-only
+    targets get no relation; AI-drafted text (`KnowledgeExtractor.ai_journal_ids`) goes over as
+    flagged notes of its own, not inside the description; `relink_attachments` points image references at the copies
+    (`update_all` — `update_column` did not persist inside the reply request); `HelpdeskTicketInfo#handover_mailbox_id` (migration
+    068, written only by `Handover`) lets `ThreadScope` keep a moved hand-over ticket local; the source ticket
+    must be visible; Bcc-only targets are flagged `bcc: true` and kept out of public notes.
+    `apply_new_issue_defaults` runs for new tickets only: project
     `default_assigned_to_id` (a `Principal` — user **or** group) first, mailbox rules second
     (they win); an `Assigned to:` keyword already honoured by `MailHandler` beats both.
   - `inline_images.rb` — embedded images. `MailHandler` saves them as attachments but leaves the
@@ -199,7 +228,13 @@ that order is what makes `safe_to_stop` trustworthy across pods.
     resolve project → central → constant and are **validated as hex, otherwise discarded**: they
     become CSS custom properties on `:root`, so an unchecked value is a style injection. The
     `.jstBlock` lookup must stay scoped to `#add_notes`. Migration 059.
-  - `init_mailer.rb` — outbound "initial" mail (contact-assign / "New Helpdesk Ticket" flow).
+  - `init_mailer.rb` — outbound "initial" mail (contact-assign / "New Helpdesk Ticket" flow). With
+    the mail ticked it hands over like a reply, but without a mode: the target gets the mail text and
+    every ticket attachment. The form's `hdInitPlan()` mirrors its rules: first remaining To is the
+    customer, `move_cc` moves the first Cc up, no To but Cc/Bcc raises `InitMailer::Error` before
+    anything happens, only hand-overs = no mail and no contact. A failed mail keeps the hand-over.
+    The new-ticket hook reports errors in `flash[:error]`; the form takes its values from
+    `params[:helpdesk_init]` because Redmine re-renders it on tracker change.
   - `mail_logger.rb` — one log line per outgoing mail incl. the transport used. Every send site
     wraps its send in `MailLogger.track` (replies, init mail, autoresponder, info request, SLA
     mail); success at
@@ -260,6 +295,17 @@ that order is what makes `safe_to_stop` trustworthy across pods.
     entry unless `force`**, otherwise a re-close would replace a correction with the model's original
     mistake. `HelpdeskKnowledgeReindexJob.rebuild(pid)` is the one per-project rebuild (tab and
     `kb_reembed`). `AiFeatures.kb_ready?` gates every write to the store.
+    **REST API** (`HelpdeskKbEntriesApiController`, `/projects/:id/helpdesk/kb_entries`, member routes
+    global by id) maps to the same three permissions in init.rb and shares the post-write logic via
+    `HelpdeskKnowledgeEntry#sync_vector!`, whose result symbol the tab turns into a flash and the API
+    returns as `vector_sync` — add a new outcome there, not in either controller.
+    It runs under the entry's **row lock** and acts on the re-read row, not the request's copy, and
+    `destroy_with_vector!` unindexes + destroys under the same lock: overlapping approve/reject/edit/
+    delete requests otherwise finish their store calls in either order and the slower undoes the
+    faster (stale upsert of rejected text, late delete of a newer vector). The lock is held across the
+    embedding call. `index_fenced` (index + `fence_index`) still covers the ingest job, which embeds
+    without the lock. **Every person-triggered or rebuild write to the store goes through `sync_vector!`**
+    (tab, API, sidebar approve, `HelpdeskKnowledgeReindexJob`) — never call `index_entry` directly there.
   **Detail levels** (`KnowledgeExtractor::DETAIL_LEVELS` = general/specific/most_specific, migration
   065): `prompt_for(level)` builds the built-in prompt; `general` keeps the old generalising
   wording, plus the privacy instruction every level (and, via `with_privacy`, every own prompt) gets. init.rb used to seed the then-current default into `kb_extract_prompt`, so

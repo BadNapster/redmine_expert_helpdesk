@@ -1,0 +1,20 @@
+h3. Added
+
+* *Hand-over to another project instead of a mail (experimental).* When a reply, a new helpdesk ticket or *Assign Contact* names the helpdesk address of another participating project, that address gets no mail: the ticket is created in that project directly, authored by the agent, with the receiving mailbox's defaults for new tickets, the customer as contact and a relation to the source ticket. In a reply the agent chooses what goes over - the note with its attachments, or the complete public history; the initial mail hands over its subject, text and all attachments. The other recipients are mailed as before, and the form shows before saving which projects get the ticket and who becomes the customer. If the mail of a reply fails, the hand-over is taken back unless someone has already worked on the new ticket. Needs the central switch *Enable hand-over to other projects* and *Take part in hand-overs* in both projects; off by default.
+* *Experimental section in the plugin settings*, framed in amber, holding the two switches that change how mail is matched or delivered.
+* *Cross-project references for a mail sent to several projects* (with project-scoped matching on). The tickets are related, and the sidebar lists the other helpdesk addresses the mail went to under *Also received by*. The relation needs Redmine's *Allow cross-project issue relations*.
+
+h3. Fixed
+
+* *A mailbox only continues tickets of its own project* (opt-in, experimental). A @[#id]@ subject tag or a Message-ID reference was followed into any project, so a mail to project B's address about a ticket of project A was appended to A's ticket - and any sender who knew a ticket number could write into it. With *Match replies only within the mailbox's project* on, references to other projects' tickets are removed and the mail becomes a ticket of the mailbox's project; ordinary replies, and replies to a ticket that was moved to another project since, are unaffected. Off by default.
+* *The same mail no longer lands twice in one project* when it was addressed to two of its mailboxes (with project-scoped matching on).
+* *Replies to agent replies are found by Message-ID again.* The lookup only worked while the subject still carried the @[#id]@ tag.
+* *Quoted display names* such as @"Doe, Jane" <jane@doe.com>@ no longer fall apart in the recipient fields of the initial mail.
+* *An internal note can be saved after a reply was stopped.* After a failed send or a missing choice, unticking the mail to save the note alone did nothing.
+* *Assign Contact checks that the agent may see the ticket*, not only the project permission.
+* *A failed initial mail of a new ticket is reported* on the ticket page instead of in the log only.
+* *The helpdesk fields of the new-ticket form survive a re-render*, e.g. after changing the tracker.
+
+h3. Upgrade notes
+
+Migrations 067 and 068 add the per-project hand-over switch and the hand-over provenance column - run the migration command. Nothing changes until it is switched on: *Match replies only within the mailbox's project* and the hand-over are both off by default and sit in the new *Experimental* section of the plugin settings. They change which ticket a mail lands in, so try them in one project first. The other fixes are active right away.

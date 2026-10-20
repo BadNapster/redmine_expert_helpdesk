@@ -62,6 +62,7 @@ Under *Administration → Plugins → Redmine expert Helpdesk*, or via the *expe
 | API key (mail fetch) | Secures the global @helpdesk/fetch_all@ endpoint |
 | API key (SLA check) | Secures the @helpdesk/sla_check@ endpoint |
 | Maintenance mode | Pauses every mail fetch and lists the fetches still running, for upgrades and scaling down (see step 6) |
+| Experimental | *Match replies only within the mailbox's project* (a mail continues only tickets of the receiving mailbox's project) and *Enable hand-over to other projects* (a ticket is created in the other project instead of mailing its helpdesk address; each project also has to enable *Take part in hand-overs* in its Helpdesk settings). Both off by default. Relating the tickets across projects needs Redmine's *Allow cross-project issue relations* |
 | Entries per page | Page size of the customer list (default 25) |
 | Max. tickets in customer profile | Tickets shown in the customer detail view (default 10) |
 | Mark tickets awaiting a response | Flags tickets whose customer replied by mail and clears the flag when an agent answers (on by default) |
@@ -120,7 +121,7 @@ While it is on, @fetch_all@ answers @{"maintenance": true}@ without touching a m
 
 h3. REST API
 
-The plugin's own REST API (contacts, tickets, project settings, mailboxes) is separate from the two cron endpoints above and uses Redmine's normal API authentication. Enable *Administration → Settings → API → Enable REST web service*; requests then authenticate with an @X-Redmine-API-Key@ header and are authorized by the same permissions as the UI. Mailbox endpoints require @manage_helpdesk@ for reading as well as writing, because the configuration exposes mail hosts, usernames and OAuth client ids. Full reference: "API.md":https://github.com/expertZentrale/redmine_expert_helpdesk/blob/main/API.md
+The plugin's own REST API (contacts, tickets, project settings, mailboxes, knowledge base) is separate from the two cron endpoints above and uses Redmine's normal API authentication. Enable *Administration → Settings → API → Enable REST web service*; requests then authenticate with an @X-Redmine-API-Key@ header and are authorized by the same permissions as the UI. Mailbox endpoints require @manage_helpdesk@ for reading as well as writing, because the configuration exposes mail hosts, usernames and OAuth client ids. Knowledge base endpoints use the same @view/edit/manage_helpdesk_kb@ permissions as the *Knowledge base* tab. Full reference: "API.md":https://github.com/expertZentrale/redmine_expert_helpdesk/blob/main/API.md
 
 h3. Upgrading
 

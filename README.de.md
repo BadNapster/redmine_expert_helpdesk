@@ -52,7 +52,9 @@ siehe [Tests](#tests).
 
 - **E-Mail zu Ticket**: Mails aus Microsoft 365 oder beliebigen IMAP-Postfächern werden als Tickets angelegt;
   Antworten werden über `In-Reply-To` / `[#id]`-Betreff dem bestehenden Ticket
-  zugeordnet (nutzt den Redmine-Standard-`MailHandler`, inkl. Anhänge).
+  zugeordnet (nutzt den Redmine-Standard-`MailHandler`, inkl. Anhänge). Ein Postfach führt nur
+  Tickets **seines eigenen Projekts** fort – siehe
+  [Mails an mehrere Projekte](#mails-an-mehrere-projekte).
 - **Status bei einer Kundenantwort**: Je Postfach kann eine eingehende Antwort das Ticket
   auf einen eigenen Status setzen — einen für ein geschlossenes Ticket (die klassische
   Wiedereröffnung) und einen getrennten für ein noch offenes, z. B. *Warten auf Kunde* →
@@ -387,6 +389,9 @@ Dienstkontos und dessen privaten PEM-Schlüssel eintragen, eine interaktive Zust
 
 ## E-Mail-Verarbeitung
 
+> **Diagramme aller Abläufe** – Abruf, Filter, Antwort oder neues Ticket, Mails an mehrere Projekte,
+> ausgehende Mails – mit allen Einstellungen, die sie verändern: [EMAIL_FLOW.de.md](EMAIL_FLOW.de.md).
+
 ### Ablauf pro Postfachabruf
 
 ```
@@ -410,7 +415,12 @@ Graph API (Quellordner)
         │                  (optional pro Projekt; bei „neutralize" werden die
         │                   Links im Body ersetzt, die Verarbeitung läuft weiter)
         ▼
+  In diesem Projekt schon erhalten? ── gleiche Message-ID ─▶ Skipped-Ordner
+        │                               (ein anderes Projekt ist kein Duplikat)
+        ▼
   MIME-Vorverarbeitung
+    ├─ Thread-Marker ([#id], Message-IDs) entfernen, die auf Tickets ANDERER
+    │  Projekte zeigen  →  die Mail bleibt im Projekt des Postfachs
     ├─ Thread-Header entfernen, wenn das referenzierte Ticket geschlossen und
     │  älter als reopen_max_age_days des Postfachs ist → erzwingt ein NEUES Ticket
     ├─ Auto-Submitted-Header bei NDR-/Bounce-Mails entfernen
@@ -438,6 +448,10 @@ Graph API (Quellordner)
         │
         ▼
   HelpdeskMessage erstellen (direction=in) + Originalmail als .eml anhängen
+        │
+        ▼
+  Mit Tickets anderer Projekte in Beziehung setzen (entfernte Marker,
+  dieselbe Mail anderswo)
         │
         ▼
   Autoresponder (nur bei neuen Tickets, wenn am Postfach aktiviert)
@@ -497,6 +511,62 @@ Der `MailHandler` prüft in dieser Reihenfolge:
 > **Hinweis**: Der `MailHandler` verwaltet auch Benutzeranlage und
 > Berechtigungsprüfungen. `unknown_user_mode` am Postfach steuert, was bei
 > unbekannten Absendern passiert (`accept`, `create`, `ignore`).
+
+### Mails an mehrere Projekte
+
+Redmines `MailHandler` folgt einem Thread-Marker in **jedes** Projekt: Das Postfach bestimmt nur,
+wohin ein *neues* Ticket geht. Teilen sich viele Projekte ein Redmine, hat das zwei Folgen – eine
+Mail an die Adresse von Projekt B zu einem Ticket aus Projekt A landet im Ticket von A, und weil der
+Helpdesk Mails ohne Berechtigungsprüfung übergibt, kann jeder, der eine Ticketnummer kennt, in dieses
+Ticket schreiben, auch in privaten Projekten.
+
+Das Plugin kann jedes Postfach in seinem eigenen Projekt halten. Das ist **experimentell und
+standardmäßig aus**, weil es ändert, in welchem Ticket eine eingehende Mail landet: einschalten unter
+*Administration → Plugins → Redmine expert Helpdesk → Konfigurieren → Experimentell → Antworten nur
+im Projekt des Postfachs zuordnen*, am besten nach einem Versuch in einem Testprojekt. Solange der
+Schalter aus ist, werden Mails zugeordnet wie bisher, und der Rest dieses Abschnitts gilt nicht.
+
+Mit eingeschaltetem Schalter wird, bevor der `MailHandler` eine Mail sieht, jeder Thread-Marker entfernt, der auf ein Ticket eines **anderen** Projekts zeigt –
+`[#id]` und `[Projekt - Tracker #id]` im Betreff, Redmine-Benachrichtigungs-IDs und protokollierte
+Helpdesk-Message-IDs in `In-Reply-To`/`References`. Ein Tag auf ein nicht existierendes Ticket wird
+ebenfalls entfernt, damit die Mail zum Ticket wird statt abgelehnt zu werden. Marker auf ein Ticket
+des eigenen Projekts bleiben unverändert, normale Kundenantworten funktionieren also weiter.
+Unterprojekte zählen als andere Projekte. Ein Ticket, das über ein Postfach eröffnet und später in
+ein anderes Projekt verschoben wurde, zählt weiterhin als eigenes, die Antworten des Kunden folgen
+ihm also.
+
+In der Praxis:
+
+| Situation | Ergebnis |
+| --- | --- |
+| Kunde schreibt an A und B (An/CC/BCC) | Ein Ticket in A, eines in B |
+| Mail an B mit `[#123]` aus Projekt A | Neues Ticket in B, Beziehung zu #123 |
+| Antwort auf eine A-Konversation, an B gesendet | Neues Ticket in B, Beziehung zum A-Ticket |
+| Dieselbe Mail erreicht zwei Postfächer **eines** Projekts | Ein Ticket; die zweite Kopie wird übersprungen |
+
+**Wie die Projekte voneinander erfahren**: Die Tickets werden mit einer Beziehung *verwandt mit*
+verknüpft (bei einem entfernten `[#id]` nur, wenn dieses Ticket zu einem Projekt mit Helpdesk-Modul
+gehört – eine Ticketnummer kann jeder in einen Betreff schreiben), und die Ticket-Seitenleiste listet unter *Auch zugestellt an* die anderen
+Helpdesk-Adressen, an die die Mail ging. Redmine zeigt eine Beziehung nur
+Benutzern, die beide Tickets sehen dürfen, und die Seitenleiste nennt das andere Projekt nur, wenn
+der Betrachter es sehen darf; niemand erfährt etwas über ein Projekt ohne Zugriff. Per BCC
+erreichte Postfächer bleiben unsichtbar. Die Beziehung setzt Redmines *Ticket-Beziehungen
+zwischen Projekten erlauben* voraus (*Administration → Konfiguration → Tickets*); ohne die
+Einstellung werden die Tickets trotzdem angelegt, nur nicht verknüpft. Die Beziehung wird still
+angelegt – kein Historieneintrag, keine Benachrichtigung an das andere Team.
+
+**Übergabe (experimentell)**: Mit *Übergabe an andere Projekte aktivieren* (zentral) und *An Übergaben
+teilnehmen* (in beiden Projekten) wird die Helpdesk-Adresse des anderen Projekts in einer Antwort nicht
+gemailt. Der Bearbeiter wählt, ob nur die Notiz mit ihren Anhängen oder die komplette Historie
+(Beschreibung, öffentliche Notizen, alle Anhänge) übergeben wird, und das Ticket wird dort direkt
+angelegt. Auch die Initialmail (*Neues Helpdesk-Ticket*, *Kontakt zuordnen*) übergibt, ohne Auswahl:
+Das andere Projekt erhält Betreff, Text und alle Anhänge, und das Formular zeigt, wer Kunde wird, und
+warnt, wenn niemand in An übrig ist. Siehe [EMAIL_FLOW.de.md](EMAIL_FLOW.de.md#übergabe-statt-mail-experimentell).
+
+Ausgehende Antworten behalten ihr `[#id]`-Tag und die Thread-Header: Die Antwort des Kunden findet
+ihr Ticket weiterhin, und Postfächer anderer Projekte ignorieren die Marker einfach. Ein
+Interceptor für ausgehende Mails, der diese Marker entfernt (wie ihn manche Installationen für
+RedmineUP nutzten), ist für Postfächer dieses Plugins nicht mehr nötig.
 
 ### Status bei einer Kundenantwort
 
@@ -1061,6 +1131,10 @@ Parametern und Beispielen: [API.md](API.md).**
 | GET / POST | `/projects/:id/helpdesk/mailboxes.{json,xml}` |
 | GET / PUT / DELETE | `/helpdesk/mailboxes/:id.{json,xml}` |
 | POST | `/helpdesk/mailboxes/:id/test_connection.{json,xml}` |
+| GET / POST | `/projects/:id/helpdesk/kb_entries.{json,xml}` |
+| GET / PUT / DELETE | `/helpdesk/kb_entries/:id.{json,xml}` |
+| POST | `/helpdesk/kb_entries/:id/{approve,reject}.{json,xml}` |
+| POST | `/projects/:id/helpdesk/kb_entries/{reindex,reextract}.{json,xml}` |
 
 Postfächer erfordern zum Lesen wie zum Schreiben `manage_helpdesk`, denn ihre
 Konfiguration legt Mail-Hosts, Benutzernamen und OAuth-Client-/Tenant-IDs offen. Ihre
@@ -1139,6 +1213,23 @@ aktiviert ist):
   der auslösenden Mail senden, optional inklusive **privater Notizen** (Standard aus; diese
   internen Notizen gehen dann ebenfalls an den Anbieter). Die eigenen KI-Zusammenfassungs-
   Notizen werden immer ausgeschlossen.
+- **Denkmodus** – *zentrale Einstellung*, *aus* oder *erlaubt*. Was *zentrale Einstellung*
+  bedeutet, legt die zentrale Checkbox **Denkmodus für Zusammenfassungen abschalten** fest
+  (Standard aus). Abgeschaltet tragen Zusammenfassungs-Anfragen
+  `chat_template_kwargs: {"enable_thinking": false}`, das vLLM und SGLang an das Chat-Template
+  von Reasoning-Modellen wie Qwen3 weiterreichen. Eine Zusammenfassung braucht keine Denkphase,
+  und ein Reasoning-Modell steckt manchmal seine ganze Ausgabe in `reasoning_content` und
+  liefert eine leere Antwort (geloggt als *Leere Antwort vom KI-Provider*). Nur der Anbieter
+  **Eigener Endpunkt** sendet das Feld: das offizielle OpenAI lehnt Reasoning-Parameter bei
+  Nicht-Reasoning-Modellen ab, und Anthropic denkt nur auf Anfrage, die das Plugin nie stellt.
+  **Den Denkmodus erlauben, solange Wissensbasis-Vorschläge in die Zusammenfassung einfließen.**
+  Ohne Denkphase beurteilt das Modell schlecht, ob ein früherer Fall passt: Im Test mit 20 Tickets
+  ergänzte es 9-mal einen unpassenden oder leeren „Lösungsvorschlag“, mit Denkmodus 0-mal. Beide
+  Einstellungsseiten warnen bei dieser Kombination.
+  **Rückfallebene:** Bei erlaubtem Denkmodus wird eine leere Antwort einmal ohne Denkmodus und ohne
+  Wissensbasis-Block wiederholt, damit das Ticket trotzdem eine Zusammenfassung bekommt. Die Notiz
+  weist darauf hin, die Vorschläge in der Seitenleiste bleiben unbewertet. Nur der eigene Endpunkt
+  wiederholt; andere Fehler nie.
 
 Die Zusammenfassung läuft **asynchron** (ActiveJob `HelpdeskAiSummaryJob`); KI-Latenz oder
 -Fehler blockieren den Mailabruf nicht – scheitert der Call, wird das Ticket dennoch erzeugt
@@ -1547,6 +1638,8 @@ Drei Berechtigungen im Modul *Helpdesk*, passend zu vorgeschlagenen Rollen:
 | `manage_helpdesk_kb` | Einträge löschen, Projekt-Index neu aufbauen, Einträge neu extrahieren | KB-Admin |
 
 Die Buttons der Ticket-Seitenleiste funktionieren wie bisher auch mit `send_helpdesk_reply`.
+Dieselben Berechtigungen gelten für die REST-API der Wissensbasis (`/projects/:id/helpdesk/kb_entries`,
+siehe [API.md](API.md#knowledge-base)), die alles bietet, was der Reiter kann.
 
 **Isolation:** jedes Projekt hat einen eigenen Vektor-Namensraum (Qdrant-Collection / erzwungener
 `project_id`-Filter) – ein Projekt ruft nie das Wissen eines anderen ab.

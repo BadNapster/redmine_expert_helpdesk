@@ -51,7 +51,9 @@ see [Tests](#tests).
 
 - **Email to ticket**: Mails from Microsoft 365 or any IMAP mailbox are created as tickets;
   replies are matched to existing tickets via `In-Reply-To` / `[#id]` subject
-  patterns (uses Redmine's standard `MailHandler`, including attachments).
+  patterns (uses Redmine's standard `MailHandler`, including attachments). A mailbox only
+  continues tickets of **its own project** — see
+  [Mail addressed to several projects](#mail-addressed-to-several-projects).
 - **Status on a customer reply**: Per mailbox, an inbound reply can move the ticket to a
   status of its own — one for a closed ticket (the classic reopen), a separate one for a
   ticket that is still open, e.g. *Waiting for customer* → *In progress*. See
@@ -372,6 +374,9 @@ its PEM private key; no interactive consent is needed.
 
 ## Email Processing
 
+> **Diagrams of every flow** — fetching, filters, reply or new ticket, mail to several projects,
+> outgoing mail — with all the settings that change them: [EMAIL_FLOW.md](EMAIL_FLOW.md).
+
 ### Flow per mailbox fetch
 
 ```
@@ -395,7 +400,12 @@ Provider (source folder) — Graph API or IMAP
         │                   (optional per project; on "neutralize" the links
         │                    are rewritten in the body and processing continues)
         ▼
+  Already received in this project? ── same Message-ID ─▶ skipped folder
+        │                              (another project receiving it is no duplicate)
+        ▼
   MIME preprocessing
+    ├─ remove thread markers ([#id], Message-IDs) pointing at tickets of
+    │  OTHER projects  →  the mail stays in the mailbox's project
     ├─ strip thread headers if the referenced ticket is closed and older than
     │  the mailbox's reopen_max_age_days  →  forces a NEW ticket
     ├─ strip the Auto-Submitted header on NDR/bounce mails
@@ -422,6 +432,9 @@ Provider (source folder) — Graph API or IMAP
         │
         ▼
   Create HelpdeskMessage (direction=in) + attach original mail as .eml
+        │
+        ▼
+  Relate to tickets of other projects (removed markers, same mail elsewhere)
         │
         ▼
   Autoresponder (new tickets only, if enabled on the mailbox)
@@ -478,6 +491,63 @@ The `MailHandler` checks in this order:
 > **Note**: The `MailHandler` also handles user creation and permission checks.
 > `unknown_user_mode` on the mailbox controls what happens with unknown senders
 > (`accept`, `create`, `ignore`).
+
+### Mail addressed to several projects
+
+Redmine's `MailHandler` follows a thread marker into **any** project: the mailbox only decides
+where a *new* ticket goes. With many projects sharing one Redmine that has two effects — a mail
+written to project B's address about a ticket of project A ends up in A's ticket, and, because the
+helpdesk hands mail over without a permission check, anyone who knows a ticket number can write
+into it, private projects included.
+
+The plugin can keep every mailbox inside its own project. This is **experimental and off by
+default**, because it changes which ticket an incoming mail lands in: switch it on under
+*Administration → Plugins → Redmine expert Helpdesk → Configure → Experimental → Match replies only
+within the mailbox's project*, ideally after trying it on a test project. While it is off, mail is
+matched as before and the rest of this section does not apply.
+
+With the switch on, before `MailHandler` sees a mail,
+every thread marker that points at a ticket of **another** project is removed — `[#id]` and
+`[Project - Tracker #id]` in the subject, Redmine notification IDs and logged helpdesk Message-IDs
+in `In-Reply-To`/`References`. A tag naming a ticket that does not exist is removed as well, so the
+mail becomes a ticket instead of being rejected. Markers pointing at a ticket of the mailbox's own
+project stay untouched, so ordinary customer replies keep working. Subprojects count as other
+projects. A ticket opened through a mailbox and moved to another project since still counts as the
+mailbox's own, so the customer's replies follow it.
+
+What that means in practice:
+
+| Situation | Result |
+| --- | --- |
+| Customer writes to A and B (To/Cc/Bcc) | One ticket in A, one in B |
+| Mail to B quoting `[#123]` of project A | New ticket in B, related to #123 |
+| Reply to an A conversation, sent to B | New ticket in B, related to the A ticket |
+| Same mail reaches two mailboxes of **one** project | One ticket; the second copy is skipped |
+
+**How the projects learn about each other**: the tickets are linked with a *related to* relation
+(a removed `[#id]` only when that ticket belongs to a project with the helpdesk module — anyone can
+write a ticket number into a subject),
+and the ticket sidebar lists the other helpdesk addresses the mail was sent to under *Also received
+by*. Redmine shows a relation only to users who can see both
+tickets, and the sidebar names the other project only to viewers who may see it; nobody learns
+anything about a project they have no access to. Mailboxes reached by Bcc stay invisible. The
+relation needs Redmine's *Allow cross-project issue relations* (*Administration → Settings →
+Issue tracking*); without it the tickets are still created, only not linked. The relation is
+added quietly — no history entry, no notification to the other team.
+
+**Hand-over (experimental)**: with *Enable hand-over to other projects* (central) and *Take part in
+hand-overs* (in both projects), a reply that names the other project's helpdesk address does not mail
+it. The agent chooses whether only the note with its attachments or the complete history (description,
+public notes, all attachments) goes over, and the ticket is created there directly. The initial
+mail (*New Helpdesk Ticket*, *Assign Contact*) hands over too, without a choice: the other project
+gets subject, text and all attachments, and the form shows who becomes the customer and warns when
+nobody is left in To. See
+[EMAIL_FLOW.md](EMAIL_FLOW.md#hand-over-instead-of-mail-experimental).
+
+Outgoing replies keep their `[#id]` tag and thread headers: the customer's answer still finds its
+ticket, and other projects' mailboxes simply ignore the markers. An outgoing mail interceptor that
+strips these markers (as some installations used for RedmineUP) is no longer needed for mailboxes
+handled by this plugin.
 
 ### Status on a customer reply
 
@@ -1017,6 +1087,10 @@ and append `.json`/`.xml`. **Full reference with all parameters and examples:
 | GET / POST | `/projects/:id/helpdesk/mailboxes.{json,xml}` |
 | GET / PUT / DELETE | `/helpdesk/mailboxes/:id.{json,xml}` |
 | POST | `/helpdesk/mailboxes/:id/test_connection.{json,xml}` |
+| GET / POST | `/projects/:id/helpdesk/kb_entries.{json,xml}` |
+| GET / PUT / DELETE | `/helpdesk/kb_entries/:id.{json,xml}` |
+| POST | `/helpdesk/kb_entries/:id/{approve,reject}.{json,xml}` |
+| POST | `/projects/:id/helpdesk/kb_entries/{reindex,reextract}.{json,xml}` |
 
 Mailboxes require `manage_helpdesk` for reading as well as writing, since their
 configuration exposes mail hosts, usernames and OAuth client/tenant ids. Their secrets
@@ -1093,6 +1167,21 @@ centrally):
   instead of only the triggering mail, and optionally include **private notes** (off by
   default; those internal notes are then sent to the provider too). The plugin's own AI
   summary notes are always excluded.
+- **Thinking mode** — *central setting*, *disabled* or *allowed*. The central checkbox
+  **Disable thinking mode for summaries** (off by default) sets what *central setting* means.
+  When disabled, summary requests carry `chat_template_kwargs: {"enable_thinking": false}`,
+  which vLLM and SGLang pass to the chat template of reasoning models such as Qwen3. A summary
+  needs no reasoning phase, and a reasoning model sometimes spends its whole output on
+  `reasoning_content` and returns an empty answer (logged as *Leere Antwort vom KI-Provider*).
+  Only the **Custom** provider sends the field: official OpenAI rejects reasoning parameters on
+  non-reasoning models, and Anthropic only thinks when asked to, which the plugin never does.
+  **Keep thinking allowed while knowledge-base proposals go into the summary.** Without
+  reasoning the model judges badly whether a past case fits: in a test with 20 tickets it added
+  an unfitting or empty „Lösungsvorschlag“ 9 times, against 0 with thinking. Both settings pages
+  show a warning for that combination.
+  **Fallback:** while thinking is allowed, an empty answer is retried once with thinking off and
+  without the knowledge-base block, so the ticket still gets a summary. The note marks it, and its
+  sidebar proposals stay unjudged. Only the Custom provider retries; other errors never do.
 
 Summaries run **asynchronously** (ActiveJob `HelpdeskAiSummaryJob`), so AI latency or
 failures never block or slow the mail-fetch cycle; if the call fails, the ticket is still
@@ -1472,7 +1561,9 @@ Three permissions in the *Helpdesk* module map to suggested roles:
 | `edit_helpdesk_kb` | edit, new entry, approve, reject (also the ticket-sidebar KB buttons) | KB editor |
 | `manage_helpdesk_kb` | delete entries, rebuild the project index, re-extract entries | KB admin |
 
-The ticket-sidebar buttons keep working with `send_helpdesk_reply` as before.
+The ticket-sidebar buttons keep working with `send_helpdesk_reply` as before. The same
+permissions govern the knowledge base's REST API (`/projects/:id/helpdesk/kb_entries`, see
+[API.md](API.md#knowledge-base)), which offers everything the tab does.
 
 **Isolation:** each project has its own vector namespace (Qdrant collection / enforced
 `project_id` filter), so a project never retrieves another project's knowledge.

@@ -54,6 +54,158 @@
   Images referenced in the body still ride along inline and are not duplicated
   as files, and only the uploader's own files are sent.
 
+## [0.23.0] - 2026-10-19
+
+### Added
+
+- **REST API for the knowledge base.** Everything the *Knowledge base* tab does is now available
+  under `/projects/:id/helpdesk/kb_entries` and `/helpdesk/kb_entries/:id` (JSON and XML): list
+  with status/text/ticket filters, show, create, update, approve, reject, delete, and the
+  background *reindex* and *reextract* jobs. Same permissions as the tab
+  (`view/edit/manage_helpdesk_kb`). Each write reports whether the vector store took the change
+  (`vector_sync`), since an approved entry that failed to embed is otherwise not searchable
+  without anyone noticing. See `API.md`.
+
+### Fixed
+
+- **Overlapping changes to a knowledge base entry** (tab, ticket sidebar, index rebuild and now the REST
+  API) could undo each other: a reject or delete during another request's embedding call left the entry
+  searchable or an orphan vector behind, and a late reject could remove a newer approval's vector. Sync
+  and delete now run one after the other per entry and follow the entry as it is stored.
+- **Approve in the ticket sidebar** now says so when the entry could not be embedded, instead of always
+  reporting success.
+
+## [0.22.0] - 2026-10-18
+
+### Documentation
+
+- **`EMAIL_FLOW.md`** (German mirror `EMAIL_FLOW.de.md`): diagrams of every mail flow — fetching,
+  filters, reply or new ticket, what happens to the ticket, mail to several projects, outgoing
+  mail — each naming the settings that change its path, plus a reference of all those settings
+  and where they are configured.
+
+### Fixed
+
+- **Quoted display names in the initial mail.** *New Helpdesk Ticket* and *Assign Contact* split
+  the recipient fields at every comma, so `"Doe, Jane" <jane@doe.com>` fell apart and the first To
+  never validated. They now split like the reply form.
+- **An internal note can be saved after a reply was stopped.** When sending the reply failed, or
+  the form stopped it for a missing choice, unticking the mail to save the note alone did nothing:
+  Redmine's double-submit guard had counted the stopped attempt.
+- **Assign Contact checks that the agent may see the ticket.** The form checked the project
+  permission only, so an agent restricted to their own tickets could mail out — and, with the
+  hand-over, copy — another ticket's description and attachments by posting its id.
+- **A failed initial mail of a new ticket is reported.** It used to end up in the log only, and the
+  agent believed the customer had it; the ticket page now shows the error.
+- **The helpdesk fields of the new-ticket form survive a re-render.** Changing the tracker, or a
+  ticket that did not validate, emptied them and left the *Send as e-mail to customer* checkbox
+  without effect.
+- **A mailbox only continues tickets of its own project** — opt-in, experimental. Redmine's `MailHandler` follows a
+  `[#id]` subject tag or a Redmine/helpdesk Message-ID in `In-Reply-To`/`References` into any
+  project, and the plugin's own thread lookup searched all projects as well. A mail sent to project
+  B's address about a ticket of project A was therefore appended to A's ticket instead of becoming
+  one in B, and since mail is handed over without a permission check, any sender who knew a ticket
+  number could write into it — private projects and projects without the helpdesk module included.
+  Thread markers pointing at another project's ticket (subprojects included) are now removed before
+  `MailHandler` sees the mail, so it becomes a ticket of the mailbox's project; markers of the own
+  project are kept, ordinary replies are unaffected. A subject tag naming a ticket that does not
+  exist is removed too — the mail used to be rejected and land in the skipped folder. Message-IDs
+  written without angle brackets, nested tags such as `[#[#4]4]` and forum reply tags
+  (`[Board - msg45]`, which let a mail post into a forum topic) are covered as well. The `.eml`
+  attached to the ticket keeps the headers as received. A subject naming more than 20 ticket numbers,
+  nested more than five levels deep or longer than 998 characters loses all of its tags (and square
+  brackets) without any lookup, so a crafted subject cannot keep the fetch busy; likewise
+  `In-Reply-To`/`References` naming more than 50 message ids are dropped unchecked. A
+  ticket opened through a mailbox and moved
+  to another project since keeps receiving the customer's replies. **Off by default**, because it
+  changes which ticket a mail lands in: switch it on under *Administration → Plugins → Redmine expert
+  Helpdesk → Configure → Experimental → Match replies only within the mailbox's project*; while it
+  is off, mail is matched as before.
+- **The same mail no longer lands twice in one project.** A mail addressed to two mailboxes of one
+  project, or to two projects of which one followed the other's thread, was added once per mailbox.
+  With project-scoped matching on, a Message-ID the project already received is skipped; another project receiving the same mail
+  is not a duplicate and gets its own ticket.
+- **Replies to agent replies are found by Message-ID again.** Outgoing messages store their
+  Message-ID with angle brackets, incoming ones without; the thread lookup only searched the bare
+  form and so never matched an agent reply — it only worked while the subject still carried the
+  `[#id]` tag.
+
+### Added
+
+- **Experimental settings, framed.** The plugin settings get an *Experimental* section with an
+  amber warning frame, holding the switches that change how mail is matched or delivered —
+  project-scoped matching and the hand-over; the project's hand-over switch carries the same frame.
+- **Hand-over to another project instead of a mail (experimental).** Central switch *Enable
+  hand-over to other projects* plus *Take part in hand-overs* per project (migration 067); both
+  projects have to take part. A reply naming a participating project's helpdesk address takes that
+  address out of the mail and asks the agent what goes over — only the note with its attachments,
+  or the complete history (description, public notes, all attachments; private notes stay behind).
+  The ticket is created there directly: authored by the agent, the mailbox's defaults for new
+  tickets, the customer as contact, related to the source ticket, and a line in the source note
+  names it; the receiving project's *Assign new tickets to* applies. Remaining recipients are mailed
+  as before; if that mail fails, the hand-over is undone, but never once the mail is out. A To
+  cleared on purpose stays empty, so a hand-over to a Cc address mails nobody. Ticket images the
+  note quotes go along, and image references in the copied text point at the copies. The target
+  team's notification goes out only once the hand-over is final. A target reached by Bcc only is
+  left out of a public note. The agent has to be able to see the source ticket. The customer's
+  contact in the target project lists the ticket right away, before any mail of theirs reaches it.
+  A handed-over ticket moved on to a third project keeps receiving replies through the mailbox it
+  was handed over to (migration 068). Only projects the agent can see are offered as targets - the
+  address of any other project stays an ordinary recipient, and the form never learns it. Without a
+  helpdesk default assignee, Redmine's project default applies when it is assignable. Contact
+  histories list only tickets the viewer may see.
+  Each participating project gets one ticket however many of its mailboxes are named; a reply that
+  would leave only Bcc recipients is refused before anything is handed over.
+- **Hand-over from a new ticket and from *Assign Contact* (experimental).** The initial mail
+  (*New Helpdesk Ticket*, and *Assign Contact* on a ticket without one) hands over as a reply does:
+  a participating project's helpdesk address leaves To/Cc/Bcc and the ticket is created there
+  directly. There is nothing to choose — the other project gets what the mail would have carried:
+  subject, text and every attachment of the ticket. The first remaining To address becomes the
+  customer, so another team's mailbox no longer turns into the customer of the ticket. The form
+  shows, while the agent types, what will happen: which projects get the ticket, who becomes the
+  customer, and a warning when nobody is left in To. A checkbox then moves the first Cc recipient
+  to To; without it, saving is blocked, since nothing would be mailed or handed over. Only
+  hand-over addresses in To means no mail and no customer, and the form says so. A failed mail
+  leaves the hand-over in place, and the agent is told both. The source ticket gets a note naming
+  the new tickets (private when a target was reached by Bcc only).
+- **Hand-over details.** A target reached by Bcc only is no longer related to the source ticket —
+  the relation showed the source's readers who else got the topic. Text an AI draft wrote goes
+  over as a note of its own, marked as such, with a placeholder in the description, so the target's
+  knowledge base and answer drafts do not take it as input; its images point at the copies as well. The provisional ticket is silenced on
+  itself instead of switching mail off for the whole process (which could swallow other requests'
+  mail), and it enters the knowledge base only once the hand-over is final. The customer list's
+  *Last ticket* counts linked tickets too, so a contact who only got a hand-over shows its date
+  instead of "–", and sorting follows the same date. A hand-over taken back after a failed mail is
+  deleted only while nobody has worked on it; one with an edit, a note or booked time stays, and the
+  error names it.
+- **Cross-project references for a mail that went to several projects** (with project-scoped
+  matching on). The ticket is related
+  (*related to*) to the other project's ticket — the one its removed markers pointed at, and the
+  one another project created from the same mail. A removed marker is only followed into a project
+  with the helpdesk module, since anyone can write a ticket number into a subject. The relation is
+  added quietly, without a history entry or notification. Redmine shows a relation only to users who may
+  see both tickets. The ticket sidebar lists the other helpdesk addresses the mail was sent to
+  under *Also received by*, naming the project only to viewers who may see it. The relation
+  requires Redmine's *Allow cross-project issue relations*; without it nothing is linked.
+
+## [0.21.0] - 2026-10-14
+
+### Added
+
+- **Option to disable thinking mode for AI summaries**, centrally and per project (central setting
+  / disabled / allowed; migration 066). A reasoning model behind the custom provider occasionally
+  spent its whole output on `reasoning_content` and returned an empty answer, so the ticket got no
+  summary (*Leere Antwort vom KI-Provider*). When disabled, summary requests send
+  `chat_template_kwargs: {"enable_thinking": false}` (vLLM/SGLang, e.g. Qwen3). Only the custom
+  provider sends it; OpenAI and Anthropic requests are unchanged. Also in the project settings API
+  as `ai_summary_disable_thinking`. Both settings pages warn when thinking is off while
+  knowledge-base proposals go into the summary: without reasoning the model added an unfitting or
+  empty solution proposal in 9 of 20 test tickets (0 with thinking).
+- **Summaries retry once when the model returns an empty answer.** With thinking allowed and the
+  custom provider, an empty answer (`EmptyResponseError`) is asked again with thinking off and
+  without the knowledge-base block, which the model judges badly without reasoning. The note says
+  so, and the sidebar proposals keep no verdict for that run. Other errors are not retried.
+
 ## [0.20.4] - 2026-10-06
 
 ### Added

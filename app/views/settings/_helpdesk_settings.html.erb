@@ -163,6 +163,27 @@
   </p>
 </fieldset>
 
+<%# Switches that change how mail is matched or delivered. Framed so nobody ticks
+    them in passing; styles in helpdesk_activity.css. %>
+<fieldset class="box tabular hd-experimental" id="hd_experimental">
+  <legend><%= l(:label_helpdesk_experimental) %></legend>
+  <p class="hd-experimental-warning"><%= l(:text_helpdesk_experimental_warning) %></p>
+  <p>
+    <%= hidden_field_tag 'settings[thread_scope_enabled]', '0', :id => nil %>
+    <%= check_box_tag 'settings[thread_scope_enabled]', '1',
+          @settings['thread_scope_enabled'].to_s == '1', :id => 'settings_thread_scope_enabled' %>
+    <%= label_tag 'settings_thread_scope_enabled', l(:field_helpdesk_thread_scope_enabled) %>
+    <em class="info"><%= l(:text_helpdesk_thread_scope_enabled_info) %></em>
+  </p>
+  <p>
+    <%= hidden_field_tag 'settings[handover_enabled]', '0', :id => nil %>
+    <%= check_box_tag 'settings[handover_enabled]', '1',
+          @settings['handover_enabled'].to_s == '1', :id => 'settings_handover_enabled' %>
+    <%= label_tag 'settings_handover_enabled', l(:field_helpdesk_handover_enabled) %>
+    <em class="info"><%= l(:text_helpdesk_handover_enabled_info) %></em>
+  </p>
+</fieldset>
+
 <fieldset class="box tabular">
   <legend><%= l(:label_helpdesk_inline_images) %></legend>
   <p>
@@ -405,6 +426,32 @@
   <label><%= l(:field_helpdesk_ai_timeout) %></label>
   <%= text_field_tag 'settings[ai_timeout]', @settings['ai_timeout'].presence || '60', :size => 8 %>
 </p>
+<p>
+  <%= hidden_field_tag 'settings[ai_summary_disable_thinking]', '0', :id => nil %>
+  <%= check_box_tag 'settings[ai_summary_disable_thinking]', '1',
+        @settings['ai_summary_disable_thinking'] == '1', :id => 'settings_ai_summary_disable_thinking' %>
+  <%= label_tag 'settings_ai_summary_disable_thinking', l(:field_helpdesk_ai_summary_disable_thinking) %>
+  <em class="info"><%= l(:text_helpdesk_ai_summary_disable_thinking_info) %></em>
+</p>
+<p class="warning" id="hd_thinking_kb_warning" style="text-align:left;" hidden><%= l(:text_helpdesk_ai_thinking_kb_warning) %></p>
+<%= javascript_tag do %>
+  // Without reasoning the model judges knowledge-base matches badly, so warn
+  // while thinking is off and the knowledge base is on (all in this form).
+  // Only the custom provider actually switches thinking off (AiClient#thinking_params).
+  (function () {
+    var box = document.getElementById('settings_ai_summary_disable_thinking');
+    var warn = document.getElementById('hd_thinking_kb_warning');
+    function kb() { return document.querySelector('input[type=checkbox][name="settings[kb_enabled]"]'); }
+    function provider() { return document.querySelector('select[name="settings[ai_provider]"]'); }
+    function sync() {
+      var k = kb(), p = provider();
+      warn.hidden = !(box.checked && k && k.checked && p && p.value === 'custom');
+    }
+    box.addEventListener('change', sync);
+    document.addEventListener('change', function (e) { if (e.target === kb() || e.target === provider()) sync(); });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sync); else sync();
+  })();
+<% end %>
 <p><em class="info"><%= l(:text_helpdesk_ai_privacy_info) %></em></p>
 
 <hr />

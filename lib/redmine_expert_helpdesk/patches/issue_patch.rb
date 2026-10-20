@@ -116,8 +116,20 @@ module RedmineExpertHelpdesk
       # At the model (after_save) so that bulk changes and API/script changes
       # are captured too, not just single updates through the
       # controller. Errors must not abort the save.
+      # Set by Handover#call on a ticket that is not final yet: no knowledge-base
+      # ingest, and the notes it had when committed (Handover.undo).
+      attr_accessor :helpdesk_skip_kb_ingest, :helpdesk_handover_journal_ids
+
       def helpdesk_enqueue_kb_ingest
         return unless saved_change_to_status_id? && closed?
+        # A provisional hand-over ticket (Handover#call) may still be taken
+        # back; Handover.finalize ingests it once it is final.
+        return if helpdesk_skip_kb_ingest
+
+        helpdesk_kb_ingest!
+      end
+
+      def helpdesk_kb_ingest!
         return unless project&.module_enabled?(:helpdesk)
         return unless RedmineExpertHelpdesk::AiFeatures.kb_enabled?
 
